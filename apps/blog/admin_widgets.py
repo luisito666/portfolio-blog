@@ -2,7 +2,6 @@ from django import forms
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 from django.templatetags.static import static
-import json
 
 class MarkdownTextArea(forms.Textarea):
     """Custom textarea widget with markdown formatting toolbar"""
@@ -15,12 +14,6 @@ class MarkdownTextArea(forms.Textarea):
         })
         kwargs['attrs'] = attrs
         super().__init__(*args, **kwargs)
-    
-    class Media:
-        css = {
-            'all': ('admin/css/markdown_editor.css',)
-        }
-        js = ('admin/js/markdown_editor.js',)
     
     def render(self, name, value, attrs=None, renderer=None):
         """Custom render method to add markdown help text"""
