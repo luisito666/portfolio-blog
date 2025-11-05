@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ project.title }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<article class="section">
+    <header style="text-align: center; margin-bottom: 3rem;">
+        <h1 style="font-size: 3rem; margin-bottom: 1rem;">{{ project.title }}</h1>
+        <div class="project-meta">
+            <p><strong>Technologies:</strong> {{ project.technologies }}</p>
+            <p>Created on {{ project.created_at|date:"F j, Y" }}{% if project.updated_at and project.updated_at > project.created_at %} (Updated {{ project.updated_at|date:"F j, Y" }}){% endif %}</p>
+        </div>
+        {% if project.image %}
+        <img src="{{ project.image.url }}" alt="{{ project.title }}" style="width: 100%; max-width: 800px; height: 300px; object-fit: cover; border-radius: 0.5rem; margin: 2rem auto; display: block;">
+        {% endif %}
+    </header>
+    
+    <div class="project-content" style="max-width: 800px; margin: 0 auto;">
+        {% if project_description_html %}
+            {{ project_description_html|safe }}
+        {% else %}
+            {{ project.description|linebreaks }}
+        {% endif %}
+    </div>
+    
+    {% if project.github_url or project.live_url %}
+    <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; text-align: center;">
+        <div class="project-links">
+            {% if project.github_url %}
+            <a href="{{ project.github_url }}" class="btn btn-primary" target="_blank">View Code</a>
+            {% endif %}
+            {% if project.live_url %}
+            <a href="{{ project.live_url }}" class="btn btn-outline" target="_blank">Live Demo</a>
+            {% endif %}
+        </div>
+    </footer>
+    {% endif %}
+    
+    <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; text-align: center;">
+        <a href="{% url 'portfolio:home' %}" class="btn btn-outline">← Back to Portfolio</a>
+    </footer>
+</article>
+{% endblock %}
