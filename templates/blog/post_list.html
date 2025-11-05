@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Blog - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="section">
+    <div class="section-header">
+        <h2>Blog</h2>
+        <p>Thoughts, tutorials, and insights</p>
+    </div>
+    
+    {% if posts %}
+    <div class="blog-list">
+        {% for post in posts %}
+        <article class="blog-post-card">
+            <h2 class="blog-post-title">
+                <a href="{% url 'blog:post_detail' post.slug %}">{{ post.title }}</a>
+            </h2>
+            <div class="blog-post-meta">
+                Published on {{ post.published_at|date:"F j, Y" }}{% if post.updated_at and post.updated_at > post.published_at %} (Updated {{ post.updated_at|date:"F j, Y" }}){% endif %}
+            </div>
+            {% if post.excerpt %}
+            <p class="blog-post-excerpt">{{ post.excerpt|truncatewords:25 }}</p>
+            {% else %}
+            <p class="blog-post-excerpt">{{ post.content|truncatewords:25 }}</p>
+            {% endif %}
+            <a href="{% url 'blog:post_detail' post.slug %}" class="btn btn-primary">Read More</a>
+        </article>
+        {% endfor %}
+    </div>
+    
+    {% if is_paginated %}
+    <div class="pagination" style="margin-top: 3rem; text-align: center;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-outline">Previous</a>
+        {% endif %}
+        
+        <span style="margin: 0 1rem; color: #718096;">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn btn-outline">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="text-center" style="padding: 3rem 0;">
+        <h3>No blog posts yet</h3>
+        <p style="color: #718096;">Check back soon for new content!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

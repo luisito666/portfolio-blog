@@ -1,0 +1,174 @@
+/* Markdown Editor CSS for Django Admin */
+
+.markdown-toolbar {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    margin: 0 0 8px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    clear: both;
+    float: none;
+    position: static;
+}
+
+/* Style for the toolbar wrapper container */
+.markdown-toolbar-container {
+    width: 100%;
+    clear: both;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.markdown-toolbar .markdown-btn {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.markdown-toolbar .markdown-btn:hover {
+    background: #e9ecef;
+    border-color: #6c757d;
+}
+
+.markdown-toolbar .markdown-btn:active {
+    background: #dee2e6;
+    transform: translateY(1px);
+}
+
+.markdown-toolbar .markdown-btn[data-action="bold"] {
+    font-weight: bold;
+    color: #000;
+}
+
+.markdown-toolbar .markdown-btn[data-action="italic"] {
+    font-style: italic;
+    color: #666;
+}
+
+.markdown-toolbar .markdown-btn[data-action="heading"] {
+    font-weight: bold;
+    color: #0056b3;
+}
+
+.markdown-toolbar .markdown-btn[data-action="center"] {
+    font-weight: bold;
+    color: #28a745;
+}
+
+.markdown-toolbar .markdown-btn[data-action="link"] {
+    color: #007bff;
+}
+
+.markdown-toolbar .markdown-btn[data-action="image"] {
+    color: #6f42c1;
+}
+
+.markdown-toolbar .markdown-btn[data-action="code"] {
+    background: #f8f9fa;
+    font-family: 'Courier New', monospace;
+    color: #dc3545;
+}
+
+.markdown-toolbar .markdown-btn[data-action="codeblock"] {
+    background: #f8f9fa;
+    font-family: 'Courier New', monospace;
+    color: #fd7e14;
+}
+
+.markdown-toolbar .markdown-btn[data-action="quote"] {
+    color: #6c757d;
+}
+
+.markdown-toolbar .markdown-btn[data-action="ul"],
+.markdown-toolbar .markdown-btn[data-action="ol"] {
+    color: #17a2b8;
+}
+
+.markdown-toolbar .markdown-btn[data-action="hr"] {
+    color: #6c757d;
+    font-weight: bold;
+}
+
+/* Django admin specific styling */
+.form-row .markdown-toolbar-container {
+    margin: 8px 0 0 0;
+}
+
+.form-row .vLargeTextField {
+    margin: 0;
+    width: 100%;
+    clear: both;
+    display: block;
+    float: none;
+}
+
+.form-row .vTextField {
+    margin: 0;
+    width: 100%;
+    clear: both;
+    display: block;
+    float: none;
+}
+
+/* Ensure toolbars appear above textareas */
+.markdown-toolbar-container + textarea {
+    clear: both;
+    width: 100%;
+    display: block;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .markdown-toolbar {
+        justify-content: center;
+    }
+    
+    .markdown-toolbar .markdown-btn {
+        min-width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+}
+
+/* Help text styling */
+.field-help {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.field-help .markdown-formatting {
+    background: #e9ecef;
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+}
+
+/* Force proper layout for all textareas */
+textarea {
+    display: block !important;
+    clear: both !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}

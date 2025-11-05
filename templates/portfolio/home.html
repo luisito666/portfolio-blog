@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Portfolio - {{ block.super }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <h1>Welcome to My Portfolio</h1>
+        <p>Software Developer & Creative Problem Solver</p>
+    </div>
+</section>
+
+<!-- About Section -->
+{% if about %}
+<section class="section">
+    <div class="section-header">
+        <h2>{{ about.title }}</h2>
+        <p>Get to know me better</p>
+    </div>
+    <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+        {% if about.profile_image %}
+        <img src="{{ about.profile_image.url }}" alt="Profile" style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin-bottom: 2rem;">
+        {% endif %}
+        <div style="font-size: 1.125rem; line-height: 1.7; color: #4a5568;">
+            {{ about.content|linebreaks }}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Skills Section -->
+{% if skills_by_category %}
+<section class="section">
+    <div class="section-header">
+        <h2>Skills & Technologies</h2>
+        <p>Technologies I work with</p>
+    </div>
+    <div class="skills-grid">
+        {% for category, skills in skills_by_category.items %}
+        <div class="skill-category">
+            <h3>{{ category }}</h3>
+            {% for skill in skills %}
+            <div class="skill-item">
+                <span class="skill-name">{{ skill.name }}</span>
+                <span class="skill-level">{{ skill.proficiency_level }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Projects Section -->
+{% if projects %}
+<section class="section">
+    <div class="section-header">
+        <h2>Featured Projects</h2>
+        <p>Some of my recent work</p>
+    </div>
+    <div class="projects-grid">
+        {% for project in projects %}
+        <div class="project-card{% if project.featured %} featured{% endif %}">
+            {% if project.image %}
+            <img src="{{ project.image.url }}" alt="{{ project.title }}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+            {% endif %}
+            <h3 class="project-title">{{ project.title }}</h3>
+            <p class="project-description">{{ project.description|truncatewords:30 }}</p>
+            <p class="project-technologies"><strong>Technologies:</strong> {{ project.technologies }}</p>
+            <div class="project-links">
+                {% if project.github_url %}
+                <a href="{{ project.github_url }}" class="btn btn-primary" target="_blank">View Code</a>
+                {% endif %}
+                {% if project.live_url %}
+                <a href="{{ project.live_url }}" class="btn btn-outline" target="_blank">Live Demo</a>
+                {% endif %}
+                {% if not project.github_url and not project.live_url %}
+                <a href="{% url 'portfolio:project_detail' project.pk %}" class="btn btn-outline">Learn More</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Call to Action -->
+<section class="section" style="text-align: center; padding: 3rem 0;">
+    <h2>Let's Work Together</h2>
+    <p style="color: #718096; font-size: 1.125rem; margin-bottom: 2rem;">I'm always interested in new opportunities and exciting projects.</p>
+    <a href="{% url 'blog:post_list' %}" class="btn btn-primary">Read My Blog</a>
+</section>
+{% endblock %}
