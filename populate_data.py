@@ -8,7 +8,7 @@ import os
 import django
 
 # Set up Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'blog_penny.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from apps.portfolio.models import About, Skill, Project

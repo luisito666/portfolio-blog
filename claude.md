@@ -46,7 +46,7 @@ blog-penny/
 │       ├── urls.py                # URLs con namespace 'portfolio'
 │       ├── admin.py               # Admin para About, Skill, Project
 │       └── migrations/
-├── blog_penny/                    # Configuración principal
+├── core/                    # Configuración principal
 │   ├── settings.py                # Configuración Django
 │   ├── urls.py                    # URLs principales
 │   ├── wsgi.py
@@ -132,7 +132,7 @@ Meta:
 
 ## Sistema de URLs
 
-### URLs Principales (`blog_penny/urls.py`)
+### URLs Principales (`core/urls.py`)
 - `/` → portfolio.urls (namespace: 'portfolio')
 - `/blog/` → blog.urls (namespace: 'blog')
 - `/admin/` → Django admin
@@ -262,7 +262,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 ### Servir en Desarrollo
 ```python
-# blog_penny/urls.py
+# core/urls.py
 from django.conf import settings
 from django.conf.urls.static import static
 

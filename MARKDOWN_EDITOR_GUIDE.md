@@ -75,7 +75,7 @@ The markdown editor includes the following formatting buttons:
 - `apps/blog/admin.py`: Updated admin configuration
 - `apps/blog/static/admin/js/markdown_editor.js`: JavaScript functionality
 - `apps/blog/static/admin/css/markdown_editor.css`: Styling
-- `blog_penny/settings.py`: Static files configuration
+- `core/settings.py`: Static files configuration
 
 ## Usage Tips
 

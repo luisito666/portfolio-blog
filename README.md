@@ -41,7 +41,7 @@ blog-penny/
 │   └── css/
 │       └── style.css
 ├── media/                # Archivos subidos
-├── blog_penny/           # Configuración del proyecto
+├── core/           # Configuración del proyecto
 └── manage.py
 ```
 
@@ -159,7 +159,7 @@ Para más información, consulta [MARKDOWN_EDITOR_GUIDE.md](MARKDOWN_EDITOR_GUID
 
 Antes de desplegar en producción, asegúrate de:
 
-1. **Cambiar configuraciones de seguridad** en `blog_penny/settings.py`:
+1. **Cambiar configuraciones de seguridad** en `core/settings.py`:
    ```python
    DEBUG = False
    SECRET_KEY = 'tu-secret-key-segura'
