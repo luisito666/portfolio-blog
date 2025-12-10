@@ -58,7 +58,7 @@ spec:
         - name: nginx
           image: "nginx:latest"
           ports:
-            - name: nginx
+            - name: http
               containerPort: 80
               protocol: TCP
           {{- with .Values.livenessProbe }}
