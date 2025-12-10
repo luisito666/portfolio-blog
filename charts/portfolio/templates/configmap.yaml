@@ -45,3 +45,13 @@ kind: ConfigMap
 metadata:
   creationTimestamp: null
   name: nginx-config
+---
+apiVersion: v1
+data:
+  {{- with .Values.configmap }}
+        {{- toYaml . | nindent 2 }}
+  {{- end }}
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: {{ include "chart.fullname" . }}-cm

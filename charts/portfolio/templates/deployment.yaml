@@ -47,6 +47,8 @@ spec:
           envFrom:
           - secretRef:
               name: postgres-portfolio-secrets
+          - configMapRef:
+              name: {{ include "chart.fullname" . }}-cm
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
