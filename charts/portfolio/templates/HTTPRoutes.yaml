@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: argocd-https-route
+  name: https-www-luisito-dev
 spec:
   parentRefs:
   - name: gateway
@@ -21,7 +21,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: argocd-https-route
+  name: https-luisito-dev
 spec:
   parentRefs:
   - name: gateway
