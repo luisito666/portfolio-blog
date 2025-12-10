@@ -122,7 +122,7 @@ volumeMountsNginx:
 
 volumesNginx:
  - name: nginx-config
-   configMapRef:
+   configMap:
      name: nginx-config
 
 # Additional volumeMounts on the output Deployment definition.
