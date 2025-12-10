@@ -47,14 +47,6 @@ spec:
           envFrom:
           - secretRef:
               name: postgres-portfolio-secrets
-          {{- with .Values.livenessProbe }}
-          livenessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.readinessProbe }}
-          readinessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -69,6 +61,14 @@ spec:
             - name: nginx
               containerPort: 80
               protocol: TCP
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}          
           {{- with .Values.volumeMountsNginx }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
