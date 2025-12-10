@@ -130,7 +130,7 @@ volumesNginx:
 volumeMounts: 
   - name: cache-volume-static
     mountPath: /app/staticfiles
-  - name: cache-volume
+  - name: media-volume
     mountPath: /app/media
 
 nodeSelector: {}
