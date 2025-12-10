@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-volume-claim
+  labels:
+    app.kubernetes.io/name: media-volume-claim
+    app.kubernetes.io/instance: portfolio
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
