@@ -140,4 +140,5 @@ affinity: {}
 
 configmap:
   ALLOWED_HOSTS: luisito.dev,www.luisito.dev
-
+  CSRF_TRUSTED_ORIGINS: https://luisito.dev,https://www.luisito.dev
+  DEBUG=0
