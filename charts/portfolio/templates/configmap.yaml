@@ -54,4 +54,4 @@ data:
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  name: {{ include "chart.fullname" . }}-cm
+  name: {{ include "portfolio.fullname" . }}-cm
