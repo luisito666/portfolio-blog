@@ -116,7 +116,7 @@ volumeMountsNginx:
  - name: nginx-config
    mountPath: /etc/nginx/nginx.conf
    subPath: nginx.conf
- - name: cache-volume
+ - name: cache-volume-static
    mountPath: /var/www/static
  - name: media-volume
    mountPath: /var/www/media
