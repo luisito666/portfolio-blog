@@ -5,11 +5,8 @@ services:
     image: postgres:15-alpine
     container_name: blog_postgres
     restart: always
-    environment:
-      POSTGRES_DB: blog_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    env_file:
+      - ./.environment/postgres/.env.example
     volumes:
       - postgres_data:/var/lib/postgresql/data/
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -37,15 +34,9 @@ services:
       - media_volume:/app/media
     expose:
       - "8000"
-    environment:
-      - DEBUG=0
-      - SECRET_KEY=django-insecure-development-key-change-in-production
-      - DB_NAME=blog_db
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_HOST=db
-      - DB_PORT=5432
-      - ALLOWED_HOSTS=localhost,127.0.0.1,web,nginx
+    env_file:
+      - ./.environment/django/.env.example
+      - ./.environment/postgres/.env.example
     depends_on:
       db:
         condition: service_healthy

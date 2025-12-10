@@ -6,31 +6,31 @@ wait_for_db() {
     echo "Waiting for PostgreSQL to be ready..."
     
     # Set default values if not provided
-    DB_HOST=${DB_HOST:-db}
-    DB_PORT=${DB_PORT:-5432}
+    POSTGRES_HOST=${POSTGRES_HOST:-db}
+    POSTGRES_PORT=${POSTGRES_PORT:-5432}
     
     if [ -n "$DATABASE_URL" ]; then
         echo "Using DATABASE_URL: $DATABASE_URL"
         # Parse DATABASE_URL to extract host and port
-        DB_HOST=$(echo $DATABASE_URL | sed -e 's|.*://.*@\([^:]*\).*|\1|')
-        DB_PORT=$(echo $DATABASE_URL | sed -e 's|.*:\([0-9]*\)/.*|\1|')
+        POSTGRES_HOST=$(echo $DATABASE_URL | sed -e 's|.*://.*@\([^:]*\).*|\1|')
+        POSTGRES_PORT=$(echo $DATABASE_URL | sed -e 's|.*:\([0-9]*\)/.*|\1|')
         
         # If parsing failed, use defaults
-        if [ -z "$DB_HOST" ] || [ "$DB_HOST" = "$DATABASE_URL" ]; then
-            DB_HOST="db"
+        if [ -z "$POSTGRES_HOST" ] || [ "$POSTGRES_HOST" = "$DATABASE_URL" ]; then
+            POSTGRES_HOST="db"
         fi
-        if [ -z "$DB_PORT" ] || [ "$DB_PORT" = "$DATABASE_URL" ]; then
-            DB_PORT="5432"
+        if [ -z "$POSTGRES_PORT" ] || [ "$POSTGRES_PORT" = "$DATABASE_URL" ]; then
+            POSTGRES_PORT="5432"
         fi
     else
         echo "Using individual DB_* variables"
-        echo "DB_HOST=$DB_HOST, DB_PORT=$DB_PORT"
+        echo "POSTGRES_HOST=$POSTGRES_HOST, POSTGRES_PORT=$POSTGRES_PORT"
     fi
     
-    echo "Checking PostgreSQL at $DB_HOST:$DB_PORT..."
+    echo "Checking PostgreSQL at $POSTGRES_HOST:$POSTGRES_PORT..."
     
     # Wait for database to be ready
-    until pg_isready -h $DB_HOST -p $DB_PORT; do
+    until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT; do
         echo "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
