@@ -19,14 +19,14 @@ class Skill(models.Model):
     """Model for storing skills"""
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=50, help_text="e.g., Programming Languages, Frameworks, Tools")
-    proficiency_level = models.IntegerField(default=50, help_text="Proficiency level from 0 to 100")
+    years_of_experience = models.IntegerField(default=1, help_text="Years of experience with this skill")
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
         return f"{self.name} ({self.category})"
     
     class Meta:
-        ordering = ['category', '-proficiency_level']
+        ordering = ['category', '-years_of_experience']
         verbose_name = "Skill"
         verbose_name_plural = "Skills"
 

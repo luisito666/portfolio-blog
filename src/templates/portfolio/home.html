@@ -45,12 +45,14 @@
         {% for category, skills in skills_by_category.items %}
         <div class="skill-category">
             <h3>{{ category }}</h3>
-            {% for skill in skills %}
-            <div class="skill-item">
-                <span class="skill-name">{{ skill.name }}</span>
-                <span class="skill-level">{{ skill.proficiency_level }}%</span>
+            <div class="skills-tags">
+                {% for skill in skills %}
+                <div class="skill-tag">
+                    <span class="skill-name">{{ skill.name }}</span>
+                    <span class="skill-years">{{ skill.years_of_experience }} year{% if skill.years_of_experience != 1 %}s{% endif %}</span>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
         {% endfor %}
     </div>

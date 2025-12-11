@@ -36,10 +36,10 @@ class AboutAdmin(admin.ModelAdmin):
 
 @admin.register(Skill)
 class SkillAdmin(admin.ModelAdmin):
-    list_display = ['name', 'category', 'proficiency_level', 'created_at']
-    list_filter = ['category', 'proficiency_level']
+    list_display = ['name', 'category', 'years_of_experience', 'created_at']
+    list_filter = ['category', 'years_of_experience']
     search_fields = ['name', 'category']
-    list_editable = ['proficiency_level']
+    list_editable = ['years_of_experience']
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
