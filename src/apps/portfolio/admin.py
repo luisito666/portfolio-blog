@@ -1,5 +1,15 @@
 from django.contrib import admin
-from .models import About, Skill, Project
+from .models import About, Skill, Project, SocialSettings
+
+@admin.register(SocialSettings)
+class SocialSettingsAdmin(admin.ModelAdmin):
+    list_display = ['__str__', 'linkedin_url', 'twitter_url', 'facebook_url', 'github_url']
+    
+    def has_add_permission(self, request):
+        # Check if an instance already exists
+        if self.model.objects.exists():
+            return False
+        return super().has_add_permission(request)
 
 @admin.register(About)
 class AboutAdmin(admin.ModelAdmin):
@@ -17,6 +27,12 @@ class AboutAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def has_add_permission(self, request):
+        # Check if an instance already exists
+        if self.model.objects.exists():
+            return False
+        return super().has_add_permission(request)
 
 @admin.register(Skill)
 class SkillAdmin(admin.ModelAdmin):

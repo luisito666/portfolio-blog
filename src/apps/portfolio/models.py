@@ -49,3 +49,17 @@ class Project(models.Model):
         ordering = ['-featured', '-created_at']
         verbose_name = "Project"
         verbose_name_plural = "Projects"
+
+class SocialSettings(models.Model):
+    """Model for storing social media links"""
+    linkedin_url = models.URLField(blank=True, null=True, help_text="LinkedIn Profile URL")
+    twitter_url = models.URLField(blank=True, null=True, help_text="Twitter Profile URL")
+    facebook_url = models.URLField(blank=True, null=True, help_text="Facebook Profile URL")
+    github_url = models.URLField(blank=True, null=True, help_text="GitHub Profile URL")
+    
+    def __str__(self):
+        return "Social Media Settings"
+    
+    class Meta:
+        verbose_name = "Social Settings"
+        verbose_name_plural = "Social Settings"
