@@ -541,6 +541,11 @@ a:hover {
         padding-top: var(--spacing-md);
     }
 
+    .nav-menu a {
+        display: block;
+        text-align: center;
+    }
+
     .nav-menu.active {
         display: flex;
     }
