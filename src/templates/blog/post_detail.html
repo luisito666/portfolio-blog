@@ -4,22 +4,22 @@
 {% block title %}{{ post.title }} - {{ block.super }}{% endblock %}
 
 {% block content %}
-<article class="section">
-    <header style="text-align: center; margin-bottom: 3rem;">
-        <h1 style="font-size: 3rem; margin-bottom: 1rem;">{{ post.title }}</h1>
+<article class="section blog-post-detail">
+    <header class="blog-post-header">
+        <h1>{{ post.title }}</h1>
         <div class="blog-post-meta">
             Published on {{ post.published_at|date:"F j, Y" }}{% if post.updated_at and post.updated_at > post.published_at %} (Updated {{ post.updated_at|date:"F j, Y" }}){% endif %}
         </div>
         {% if post.featured_image %}
-        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" style="width: 100%; max-width: 800px; height: 300px; object-fit: cover; border-radius: 0.5rem; margin: 2rem auto; display: block;">
+        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="blog-post-image">
         {% endif %}
     </header>
     
-    <div class="blog-post-content" style="max-width: 800px; margin: 0 auto;">
+    <div class="blog-post-content">
         {{ post_html|safe }}
     </div>
     
-    <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; text-align: center;">
+    <footer class="blog-post-footer">
         <a href="{% url 'blog:post_list' %}" class="btn btn-outline">← Back to Blog</a>
     </footer>
 </article>

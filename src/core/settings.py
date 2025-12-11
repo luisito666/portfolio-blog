@@ -31,7 +31,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lamb
 
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS', 
-    default='localhost,127.0.0.1',
+    default='http://localhost,http://127.0.0.1',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 

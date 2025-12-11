@@ -31,12 +31,12 @@
     </div>
     
     {% if is_paginated %}
-    <div class="pagination" style="margin-top: 3rem; text-align: center;">
+    <div class="pagination">
         {% if page_obj.has_previous %}
         <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-outline">Previous</a>
         {% endif %}
         
-        <span style="margin: 0 1rem; color: #718096;">
+        <span class="page-info">
             Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
         </span>
         
@@ -47,9 +47,9 @@
     {% endif %}
     
     {% else %}
-    <div class="text-center" style="padding: 3rem 0;">
+    <div class="empty-state">
         <h3>No blog posts yet</h3>
-        <p style="color: #718096;">Check back soon for new content!</p>
+        <p>Check back soon for new content!</p>
     </div>
     {% endif %}
 </div>

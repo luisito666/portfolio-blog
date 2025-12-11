@@ -19,11 +19,11 @@
         <h2>{{ about.title }}</h2>
         <p>Get to know me better</p>
     </div>
-    <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+    <div class="about-content">
         {% if about.profile_image %}
-        <img src="{{ about.profile_image.url }}" alt="Profile" style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin-bottom: 2rem;">
+        <img src="{{ about.profile_image.url }}" alt="Profile" class="profile-image">
         {% endif %}
-        <div style="font-size: 1.125rem; line-height: 1.7; color: #4a5568; text-align: justify;">
+        <div class="about-text">
             {% if about_html %}
                 {{ about_html|safe }}
             {% else %}
@@ -68,7 +68,7 @@
         {% for project in projects %}
         <div class="project-card{% if project.featured %} featured{% endif %}">
             {% if project.image %}
-            <img src="{{ project.image.url }}" alt="{{ project.title }}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+            <img src="{{ project.image.url }}" alt="{{ project.title }}" class="project-image">
             {% endif %}
             <h3 class="project-title"><a href="{% url 'portfolio:project_detail' project.pk %}">{{ project.title }}</a></h3>
             <div class="project-description">
@@ -97,9 +97,9 @@
 {% endif %}
 
 <!-- Call to Action -->
-<section class="section" style="text-align: center; padding: 3rem 0;">
+<section class="section cta-section">
     <h2>Let's Work Together</h2>
-    <p style="color: #718096; font-size: 1.125rem; margin-bottom: 2rem;">I'm always interested in new opportunities and exciting projects.</p>
+    <p>I'm always interested in new opportunities and exciting projects.</p>
     <a href="{% url 'blog:post_list' %}" class="btn btn-primary">Read My Blog</a>
 </section>
 {% endblock %}
