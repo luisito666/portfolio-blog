@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Work Experience - {{ block.super }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <h1>Work Experience</h1>
+        <p>My professional journey and career highlights</p>
+    </div>
+</section>
+
+<!-- Experience Section -->
+<section class="section">
+    {% if experiences %}
+    <div class="experience-timeline">
+        {% for experience in experiences %}
+        <div class="experience-item">
+            <div class="experience-date">
+                <div class="date-badge">
+                    {{ experience.start_date|date:"M Y" }} - 
+                    {% if experience.current %}
+                        <span class="current-badge">Present</span>
+                    {% else %}
+                        {{ experience.end_date|date:"M Y" }}
+                    {% endif %}
+                </div>
+                <div class="duration">{{ experience.duration }}</div>
+            </div>
+            
+            <div class="experience-content">
+                <div class="experience-header">
+                    <h3 class="experience-position">{{ experience.position }}</h3>
+                    <div class="experience-company">
+                        {% if experience.company_url %}
+                            <a href="{{ experience.company_url }}" target="_blank" rel="noopener noreferrer">
+                                {{ experience.company }}
+                            </a>
+                        {% else %}
+                            {{ experience.company }}
+                        {% endif %}
+                        {% if experience.location %}
+                            <span class="experience-location">
+                                <i class="fas fa-map-marker-alt"></i> {{ experience.location }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="experience-description">
+                    {{ experience.description_html|safe }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No work experience entries yet.</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Call to Action -->
+<section class="section cta-section">
+    <h2>Interested in Working Together?</h2>
+    <p>Feel free to check out my projects and blog posts.</p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'portfolio:home' %}" class="btn btn-primary">View Projects</a>
+        <a href="{% url 'blog:post_list' %}" class="btn btn-outline">Read My Blog</a>
+    </div>
+</section>
+{% endblock %}

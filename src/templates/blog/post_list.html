@@ -4,11 +4,15 @@
 {% block title %}Blog - {{ block.super }}{% endblock %}
 
 {% block content %}
-<div class="section">
-    <div class="section-header">
-        <h2>Blog</h2>
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <h1>Blog</h1>
         <p>Thoughts, tutorials, and insights</p>
     </div>
+</section>
+
+<div class="section">
     
     {% if posts %}
     <div class="blog-list">

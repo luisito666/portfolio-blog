@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.views.generic import TemplateView
-from .models import About, Skill, Project
+from .models import About, Skill, Project, Experience
 import markdown
 
 class HomeView(TemplateView):
@@ -45,4 +45,20 @@ class ProjectDetailView(TemplateView):
         # Convert markdown description to HTML
         context['project_description_html'] = markdown.markdown(project.description, extensions=['extra', 'codehilite'])
         context['project'] = project
+        return context
+
+class ExperienceListView(TemplateView):
+    """Work experience list view"""
+    template_name = 'portfolio/experience_list.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get all experiences ordered by start date (most recent first)
+        experiences = Experience.objects.all()
+        for experience in experiences:
+            # Convert markdown description to HTML
+            experience.description_html = markdown.markdown(experience.description, extensions=['extra', 'codehilite'])
+        context['experiences'] = experiences
+        
         return context

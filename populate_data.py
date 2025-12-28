@@ -11,10 +11,10 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from apps.portfolio.models import About, Skill, Project
+from apps.portfolio.models import About, Skill, Project, Experience
 from apps.blog.models import BlogPost
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, date
 
 def create_sample_data():
     """Create sample data for the portfolio and blog"""
@@ -25,6 +25,7 @@ def create_sample_data():
     Project.objects.all().delete()
     Skill.objects.all().delete()
     About.objects.all().delete()
+    Experience.objects.all().delete()
     
     # Create About section
     print("Creating About section...")
@@ -43,39 +44,39 @@ I'm always excited to take on new challenges and work on projects that make a po
     print("Creating skills...")
     skills_data = [
         # Programming Languages
-        ("Python", "Programming Languages", 90),
-        ("JavaScript", "Programming Languages", 85),
-        ("Java", "Programming Languages", 75),
-        ("C++", "Programming Languages", 70),
-        ("TypeScript", "Programming Languages", 80),
+        ("Python", "Programming Languages", 5),
+        ("JavaScript", "Programming Languages", 4),
+        ("Java", "Programming Languages", 3),
+        ("C++", "Programming Languages", 2),
+        ("TypeScript", "Programming Languages", 3),
         
         # Web Technologies
-        ("HTML/CSS", "Web Technologies", 95),
-        ("React", "Web Technologies", 85),
-        ("Django", "Web Technologies", 90),
-        ("Node.js", "Web Technologies", 80),
-        ("Vue.js", "Web Technologies", 75),
+        ("HTML/CSS", "Web Technologies", 6),
+        ("React", "Web Technologies", 4),
+        ("Django", "Web Technologies", 5),
+        ("Node.js", "Web Technologies", 3),
+        ("Vue.js", "Web Technologies", 2),
         
         # Databases & Tools
-        ("PostgreSQL", "Databases", 85),
-        ("MongoDB", "Databases", 80),
-        ("Git", "Development Tools", 90),
-        ("Docker", "Development Tools", 75),
-        ("AWS", "Cloud Services", 70),
+        ("PostgreSQL", "Databases", 4),
+        ("MongoDB", "Databases", 3),
+        ("Git", "Development Tools", 5),
+        ("Docker", "Development Tools", 3),
+        ("AWS", "Cloud Services", 2),
         
         # Other Skills
-        ("Machine Learning", "AI/ML", 65),
-        ("Data Analysis", "Data Science", 70),
-        ("API Development", "Backend", 85),
-        ("Responsive Design", "Frontend", 90),
-        ("Problem Solving", "Soft Skills", 95),
+        ("Machine Learning", "AI/ML", 2),
+        ("Data Analysis", "Data Science", 2),
+        ("API Development", "Backend", 4),
+        ("Responsive Design", "Frontend", 5),
+        ("Problem Solving", "Soft Skills", 6),
     ]
     
-    for name, category, level in skills_data:
+    for name, category, years in skills_data:
         Skill.objects.create(
             name=name,
             category=category,
-            proficiency_level=level
+            years_of_experience=years
         )
     
     # Create Projects
@@ -117,6 +118,71 @@ I'm always excited to take on new challenges and work on projects that make a po
     
     for project_data in projects_data:
         Project.objects.create(**project_data)
+    
+    # Create Work Experience
+    print("Creating work experience...")
+    experiences_data = [
+        {
+            "company": "Tech Solutions Inc.",
+            "position": "Senior Full Stack Developer",
+            "description": """**Led development of enterprise web applications** using Django and React, serving 100k+ daily active users.
+
+### Key Achievements:
+- Architected and implemented microservices architecture, improving system performance by 40%
+- Mentored team of 5 junior developers, establishing best practices and code review processes
+- Reduced deployment time by 60% through CI/CD pipeline automation with Docker and GitHub Actions
+- Implemented comprehensive testing strategy, achieving 85% code coverage
+
+### Technologies:
+Python, Django, React, PostgreSQL, Redis, Docker, AWS, GraphQL""",
+            "location": "San Francisco, CA",
+            "start_date": date(2021, 3, 1),
+            "end_date": None,
+            "current": True,
+            "company_url": "https://techsolutions.example.com",
+        },
+        {
+            "company": "StartupXYZ",
+            "position": "Full Stack Developer",
+            "description": """**Built and maintained core product features** for a fast-growing SaaS platform in the fintech space.
+
+### Responsibilities:
+- Developed RESTful APIs and microservices using Node.js and Express
+- Created responsive user interfaces with Vue.js and modern CSS
+- Collaborated with product team to define technical requirements
+- Optimized database queries, reducing page load times by 50%
+
+### Technologies:
+JavaScript, Node.js, Vue.js, MongoDB, Express, AWS Lambda""",
+            "location": "Remote",
+            "start_date": date(2019, 6, 15),
+            "end_date": date(2021, 2, 28),
+            "current": False,
+            "company_url": "https://startupxyz.example.com",
+        },
+        {
+            "company": "Digital Agency Co.",
+            "position": "Junior Web Developer",
+            "description": """**Contributed to client projects** building custom websites and web applications.
+
+### Experience Gained:
+- Developed responsive websites using HTML, CSS, JavaScript, and WordPress
+- Participated in agile development process with daily standups and sprint planning
+- Worked directly with clients to gather requirements and provide technical solutions
+- Implemented SEO best practices and web accessibility standards
+
+### Technologies:
+HTML, CSS, JavaScript, WordPress, PHP, MySQL, jQuery""",
+            "location": "New York, NY",
+            "start_date": date(2017, 9, 1),
+            "end_date": date(2019, 5, 31),
+            "current": False,
+            "company_url": None,
+        },
+    ]
+    
+    for experience_data in experiences_data:
+        Experience.objects.create(**experience_data)
     
     # Create Blog Posts
     print("Creating blog posts...")
@@ -328,6 +394,7 @@ Good version control habits make development smoother and collaboration more eff
     print(f"- About section: 1")
     print(f"- Skills: {Skill.objects.count()}")
     print(f"- Projects: {Project.objects.count()}")
+    print(f"- Work experience: {Experience.objects.count()}")
     print(f"- Blog posts: {BlogPost.objects.count()}")
 
 if __name__ == "__main__":

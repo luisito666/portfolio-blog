@@ -25,6 +25,7 @@
             </button>
             <ul class="nav-menu">
                 <li><a href="{% url 'portfolio:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Portfolio</a></li>
+                <li><a href="{% url 'portfolio:experience_list' %}" class="{% if request.resolver_match.url_name == 'experience_list' %}active{% endif %}">Experience</a></li>
                 <li><a href="{% url 'blog:post_list' %}" class="{% if 'blog' in request.resolver_match.app_names %}active{% endif %}">Blog</a></li>
             </ul>
         </div>

@@ -4,16 +4,18 @@
 {% block title %}{{ post.title }} - {{ block.super }}{% endblock %}
 
 {% block content %}
-<article class="section blog-post-detail">
-    <header class="blog-post-header">
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
         <h1>{{ post.title }}</h1>
-        <div class="blog-post-meta">
-            Published on {{ post.published_at|date:"F j, Y" }}{% if post.updated_at and post.updated_at > post.published_at %} (Updated {{ post.updated_at|date:"F j, Y" }}){% endif %}
-        </div>
-        {% if post.featured_image %}
-        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="blog-post-image">
-        {% endif %}
-    </header>
+        <p>Published on {{ post.published_at|date:"F j, Y" }}</p>
+    </div>
+</section>
+
+<article class="section blog-post-detail">
+    {% if post.featured_image %}
+    <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="blog-post-image" style="margin-bottom: var(--spacing-xl);">
+    {% endif %}
     
     <div class="blog-post-content">
         {{ post_html|safe }}

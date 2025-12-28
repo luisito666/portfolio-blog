@@ -63,3 +63,43 @@ class SocialSettings(models.Model):
     class Meta:
         verbose_name = "Social Settings"
         verbose_name_plural = "Social Settings"
+
+class Experience(models.Model):
+    """Model for storing work experience"""
+    company = models.CharField(max_length=200, help_text="Company name")
+    position = models.CharField(max_length=200, help_text="Job title/position")
+    description = models.TextField(help_text="Job description and achievements in markdown format")
+    location = models.CharField(max_length=200, blank=True, null=True, help_text="Job location (city, country)")
+    start_date = models.DateField(help_text="Start date of employment")
+    end_date = models.DateField(blank=True, null=True, help_text="End date (leave empty if current)")
+    current = models.BooleanField(default=False, help_text="Currently working here")
+    company_url = models.URLField(blank=True, null=True, help_text="Company website URL")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.position} at {self.company}"
+    
+    @property
+    def duration(self):
+        """Calculate duration of employment"""
+        from datetime import date
+        end = self.end_date if self.end_date else date.today()
+        years = (end.year - self.start_date.year)
+        months = (end.month - self.start_date.month)
+        
+        if months < 0:
+            years -= 1
+            months += 12
+            
+        if years > 0 and months > 0:
+            return f"{years} year{'s' if years > 1 else ''}, {months} month{'s' if months > 1 else ''}"
+        elif years > 0:
+            return f"{years} year{'s' if years > 1 else ''}"
+        else:
+            return f"{months} month{'s' if months > 1 else ''}"
+    
+    class Meta:
+        ordering = ['-start_date']
+        verbose_name = "Work Experience"
+        verbose_name_plural = "Work Experiences"

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import About, Skill, Project, SocialSettings
+from .models import About, Skill, Project, SocialSettings, Experience
 
 @admin.register(SocialSettings)
 class SocialSettingsAdmin(admin.ModelAdmin):
@@ -59,6 +59,31 @@ class ProjectAdmin(admin.ModelAdmin):
         }),
         ('Settings', {
             'fields': ('featured',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(Experience)
+class ExperienceAdmin(admin.ModelAdmin):
+    list_display = ['position', 'company', 'start_date', 'end_date', 'current', 'created_at']
+    list_filter = ['current', 'start_date', 'created_at']
+    search_fields = ['company', 'position', 'description', 'location']
+    list_editable = ['current']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'start_date'
+    
+    fieldsets = (
+        ('Experience Information', {
+            'fields': ('company', 'position', 'location', 'company_url')
+        }),
+        ('Description', {
+            'fields': ('description',)
+        }),
+        ('Employment Period', {
+            'fields': ('start_date', 'end_date', 'current')
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),
