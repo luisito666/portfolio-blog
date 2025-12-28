@@ -35,6 +35,13 @@ CSRF_TRUSTED_ORIGINS = config(
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
+# PDF Settings
+PDF_OWNER_NAME = config('PDF_OWNER_NAME', default='Portfolio Owner')
+
+# reCAPTCHA Settings
+RECAPTCHA_PUBLIC_KEY = config('RECAPTCHA_PUBLIC_KEY', default='')
+RECAPTCHA_PRIVATE_KEY = config('RECAPTCHA_PRIVATE_KEY', default='')
+
 # Application definition
 
 INSTALLED_APPS = [

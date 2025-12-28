@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import About, Skill, Project, SocialSettings, Experience, Summary, Certification, Education
+from .models import About, Skill, Project, SocialSettings, Experience, Summary, Certification, Education, Lead
+
+@admin.register(Lead)
+class LeadAdmin(admin.ModelAdmin):
+    list_display = ['name', 'email', 'downloaded_at']
+    list_filter = ['downloaded_at']
+    search_fields = ['name', 'email']
+    readonly_fields = ['downloaded_at']
 
 @admin.register(SocialSettings)
 class SocialSettingsAdmin(admin.ModelAdmin):

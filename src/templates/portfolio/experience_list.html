@@ -3,6 +3,10 @@
 
 {% block title %}Work Experience - {{ block.super }}{% endblock %}
 
+{% block scripts %}
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+{% endblock %}
+
 {% block content %}
 <!-- Hero Section -->
 <section class="hero-section">
@@ -222,8 +226,7 @@
                 <input type="email" id="email" name="email" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
             <div style="margin-bottom: 15px;">
-                <label for="captcha" style="display: block; margin-bottom: 5px;">Security Question: What is 3 + 5?</label>
-                <input type="text" id="captcha" name="captcha" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" placeholder="Enter the number">
+                <div class="g-recaptcha" data-sitekey="{{ recaptcha_public_key }}"></div>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%;">Download</button>
         </form>
@@ -255,7 +258,12 @@
             e.preventDefault();
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
-            const captcha = document.getElementById('captcha').value;
+            const captcha = grecaptcha.getResponse();
+
+            if (!captcha) {
+                alert('Please complete the captcha.');
+                return;
+            }
 
             fetch('{% url "portfolio:download_cv" %}', {
                 method: 'POST',

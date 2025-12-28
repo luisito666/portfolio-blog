@@ -76,7 +76,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ user.get_full_name|default:"Portfolio Owner" }}</h1>
+        <h1>{{ pdf_owner_name }}</h1>
         <div class="contact-info">
             {% if social_settings.linkedin_url %}LinkedIn: {{ social_settings.linkedin_url }} | {% endif %}
             {% if social_settings.github_url %}GitHub: {{ social_settings.github_url }} | {% endif %}

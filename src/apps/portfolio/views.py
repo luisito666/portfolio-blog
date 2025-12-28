@@ -4,8 +4,10 @@ from django.http import HttpResponse, JsonResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from .models import About, Skill, Project, Experience, Summary, Certification, Education, Lead, SocialSettings
+from django.conf import settings
 import markdown
 import json
+import requests
 
 class HomeView(TemplateView):
     """Main portfolio homepage view"""
@@ -88,6 +90,8 @@ class ExperienceListView(TemplateView):
                 education.description_html = markdown.markdown(education.description, extensions=['extra', 'codehilite'])
         context['education_list'] = education_list
         
+        context['recaptcha_public_key'] = settings.RECAPTCHA_PUBLIC_KEY
+        
         return context
 
 class DownloadCVView(View):
@@ -102,8 +106,18 @@ class DownloadCVView(View):
             if not name or not email:
                 return JsonResponse({'error': 'Name and email are required'}, status=400)
             
-            if captcha != '8':
-                return JsonResponse({'error': 'Incorrect security question answer'}, status=400)
+            # Verify reCAPTCHA
+            recaptcha_response = requests.post(
+                'https://www.google.com/recaptcha/api/siteverify',
+                data={
+                    'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                    'response': captcha
+                }
+            )
+            result = recaptcha_response.json()
+            
+            if not result.get('success'):
+                return JsonResponse({'error': 'Invalid reCAPTCHA. Please try again.'}, status=400)
             
             Lead.objects.create(name=name, email=email)
             
@@ -155,7 +169,8 @@ class GeneratePDFView(View):
             'education_list': education_list,
             'skill_columns': skill_columns,
             'social_settings': social_settings,
-            'user': request.user
+            'user': request.user,
+            'pdf_owner_name': settings.PDF_OWNER_NAME
         }
         
         template_path = 'portfolio/cv_pdf.html'
