@@ -103,3 +103,95 @@ class Experience(models.Model):
         ordering = ['-start_date']
         verbose_name = "Work Experience"
         verbose_name_plural = "Work Experiences"
+
+class Summary(models.Model):
+    """Model for storing professional summary/bio"""
+    title = models.CharField(max_length=200, default="Professional Summary", help_text="Section title")
+    content = models.TextField(help_text="Professional summary in markdown format")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.title
+    
+    class Meta:
+        verbose_name = "Professional Summary"
+        verbose_name_plural = "Professional Summary"
+
+class Certification(models.Model):
+    """Model for storing certifications and courses"""
+    name = models.CharField(max_length=200, help_text="Certification or course name")
+    issuing_organization = models.CharField(max_length=200, help_text="Organization that issued the certification")
+    issue_date = models.DateField(help_text="Date when certification was issued")
+    expiry_date = models.DateField(blank=True, null=True, help_text="Expiration date (leave empty if doesn't expire)")
+    credential_id = models.CharField(max_length=200, blank=True, null=True, help_text="Credential ID or certificate number")
+    credential_url = models.URLField(blank=True, null=True, help_text="URL to verify credential")
+    description = models.TextField(blank=True, null=True, help_text="Brief description in markdown format")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.name} - {self.issuing_organization}"
+    
+    @property
+    def is_expired(self):
+        """Check if certification is expired"""
+        from datetime import date
+        if self.expiry_date:
+            return self.expiry_date < date.today()
+        return False
+    
+    class Meta:
+        ordering = ['-issue_date']
+        verbose_name = "Certification"
+        verbose_name_plural = "Certifications"
+
+class Education(models.Model):
+    """Model for storing education history"""
+    institution = models.CharField(max_length=200, help_text="Educational institution name")
+    degree = models.CharField(max_length=200, help_text="Degree or diploma obtained")
+    field_of_study = models.CharField(max_length=200, help_text="Major or field of study")
+    start_date = models.DateField(help_text="Start date")
+    end_date = models.DateField(blank=True, null=True, help_text="End date (leave empty if current)")
+    current = models.BooleanField(default=False, help_text="Currently studying here")
+    grade = models.CharField(max_length=100, blank=True, null=True, help_text="GPA or grade (e.g., '3.8/4.0', 'First Class')")
+    description = models.TextField(blank=True, null=True, help_text="Additional details in markdown format")
+    institution_url = models.URLField(blank=True, null=True, help_text="Institution website URL")
+    location = models.CharField(max_length=200, blank=True, null=True, help_text="Institution location (city, country)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.degree} in {self.field_of_study} - {self.institution}"
+    
+    @property
+    def duration(self):
+        """Calculate duration of education"""
+        from datetime import date
+        end = self.end_date if self.end_date else date.today()
+        years = (end.year - self.start_date.year)
+        
+        if years > 0:
+            return f"{years} year{'s' if years > 1 else ''}"
+        else:
+            months = (end.year - self.start_date.year) * 12 + (end.month - self.start_date.month)
+            return f"{months} month{'s' if months > 1 else ''}"
+    
+    class Meta:
+        ordering = ['-start_date']
+        verbose_name = "Education"
+        verbose_name_plural = "Education"
+
+class Lead(models.Model):
+    """Model for storing leads who download the CV"""
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    downloaded_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.email})"
+    
+    class Meta:
+        ordering = ['-downloaded_at']
+        verbose_name = "Lead"
+        verbose_name_plural = "Leads"

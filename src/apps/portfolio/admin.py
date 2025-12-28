@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import About, Skill, Project, SocialSettings, Experience
+from .models import About, Skill, Project, SocialSettings, Experience, Summary, Certification, Education
 
 @admin.register(SocialSettings)
 class SocialSettingsAdmin(admin.ModelAdmin):
@@ -83,6 +83,84 @@ class ExperienceAdmin(admin.ModelAdmin):
             'fields': ('description',)
         }),
         ('Employment Period', {
+            'fields': ('start_date', 'end_date', 'current')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(Summary)
+class SummaryAdmin(admin.ModelAdmin):
+    list_display = ['title', 'created_at', 'updated_at']
+    list_filter = ['created_at', 'updated_at']
+    search_fields = ['title', 'content']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Content', {
+            'fields': ('title', 'content')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Check if an instance already exists
+        if self.model.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+@admin.register(Certification)
+class CertificationAdmin(admin.ModelAdmin):
+    list_display = ['name', 'issuing_organization', 'issue_date', 'expiry_date', 'is_expired']
+    list_filter = ['issue_date', 'issuing_organization']
+    search_fields = ['name', 'issuing_organization', 'credential_id']
+    readonly_fields = ['created_at', 'updated_at', 'is_expired']
+    date_hierarchy = 'issue_date'
+    
+    fieldsets = (
+        ('Certification Information', {
+            'fields': ('name', 'issuing_organization', 'description')
+        }),
+        ('Dates', {
+            'fields': ('issue_date', 'expiry_date')
+        }),
+        ('Credential Details', {
+            'fields': ('credential_id', 'credential_url'),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at', 'is_expired'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def is_expired(self, obj):
+        return obj.is_expired
+    is_expired.boolean = True
+    is_expired.short_description = 'Expired'
+
+@admin.register(Education)
+class EducationAdmin(admin.ModelAdmin):
+    list_display = ['degree', 'field_of_study', 'institution', 'start_date', 'end_date', 'current']
+    list_filter = ['current', 'start_date', 'institution']
+    search_fields = ['institution', 'degree', 'field_of_study', 'description']
+    list_editable = ['current']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'start_date'
+    
+    fieldsets = (
+        ('Education Information', {
+            'fields': ('institution', 'degree', 'field_of_study', 'location', 'institution_url')
+        }),
+        ('Academic Details', {
+            'fields': ('grade', 'description')
+        }),
+        ('Study Period', {
             'fields': ('start_date', 'end_date', 'current')
         }),
         ('Metadata', {

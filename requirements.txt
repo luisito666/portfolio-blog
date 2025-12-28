@@ -7,3 +7,4 @@ psycopg==3.3.2
 psycopg-binary==3.3.2
 python-decouple==3.8
 gunicorn==21.2.0
+xhtml2pdf==0.2.15

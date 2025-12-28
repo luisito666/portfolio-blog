@@ -9,11 +9,29 @@
     <div class="container">
         <h1>Work Experience</h1>
         <p>My professional journey and career highlights</p>
+        <button id="download-cv-btn" class="btn btn-primary" style="margin-top: 1rem;">Download CV</button>
     </div>
 </section>
 
+<!-- Professional Summary Section -->
+{% if summary %}
+<section class="section cv-section">
+    <div class="cv-section-header">
+        <h2>{{ summary.title }}</h2>
+        <div class="section-divider"></div>
+    </div>
+    <div class="cv-summary-content">
+        {{ summary_html|safe }}
+    </div>
+</section>
+{% endif %}
+
 <!-- Experience Section -->
-<section class="section">
+<section class="section cv-section">
+    <div class="cv-section-header">
+        <h2>Work Experience</h2>
+        <div class="section-divider"></div>
+    </div>
     {% if experiences %}
     <div class="experience-timeline">
         {% for experience in experiences %}
@@ -63,6 +81,121 @@
     {% endif %}
 </section>
 
+<!-- Certifications Section -->
+{% if certifications %}
+<section class="section cv-section">
+    <div class="cv-section-header">
+        <h2>Certifications & Courses</h2>
+        <div class="section-divider"></div>
+    </div>
+    <div class="certifications-grid">
+        {% for cert in certifications %}
+        <div class="certification-card">
+            <div class="certification-header">
+                <h3 class="certification-name">{{ cert.name }}</h3>
+                <div class="certification-organization">{{ cert.issuing_organization }}</div>
+            </div>
+            
+            <div class="certification-details">
+                <div class="certification-date">
+                    <i class="fas fa-calendar-alt"></i>
+                    Issued: {{ cert.issue_date|date:"M Y" }}
+                    {% if cert.expiry_date %}
+                        {% if cert.is_expired %}
+                            <span class="expired-badge">Expired: {{ cert.expiry_date|date:"M Y" }}</span>
+                        {% else %}
+                            <span class="valid-badge">Valid until: {{ cert.expiry_date|date:"M Y" }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="no-expiry-badge">No Expiration</span>
+                    {% endif %}
+                </div>
+                
+                {% if cert.credential_id %}
+                <div class="credential-info">
+                    <strong>Credential ID:</strong> {{ cert.credential_id }}
+                </div>
+                {% endif %}
+                
+                {% if cert.description %}
+                <div class="certification-description">
+                    {{ cert.description_html|safe }}
+                </div>
+                {% endif %}
+                
+                {% if cert.credential_url %}
+                <div class="certification-link">
+                    <a href="{{ cert.credential_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+                        <i class="fas fa-certificate"></i> Verify Credential
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Education Section -->
+{% if education_list %}
+<section class="section cv-section">
+    <div class="cv-section-header">
+        <h2>Education</h2>
+        <div class="section-divider"></div>
+    </div>
+    <div class="education-timeline">
+        {% for edu in education_list %}
+        <div class="education-item">
+            <div class="education-date">
+                <div class="date-badge">
+                    {{ edu.start_date|date:"Y" }} -
+                    {% if edu.current %}
+                        <span class="current-badge">Present</span>
+                    {% else %}
+                        {{ edu.end_date|date:"Y" }}
+                    {% endif %}
+                </div>
+                <div class="duration">{{ edu.duration }}</div>
+            </div>
+            
+            <div class="education-content">
+                <div class="education-header">
+                    <h3 class="education-degree">{{ edu.degree }}</h3>
+                    <div class="education-field">{{ edu.field_of_study }}</div>
+                    <div class="education-institution">
+                        {% if edu.institution_url %}
+                            <a href="{{ edu.institution_url }}" target="_blank" rel="noopener noreferrer">
+                                {{ edu.institution }}
+                            </a>
+                        {% else %}
+                            {{ edu.institution }}
+                        {% endif %}
+                        {% if edu.location %}
+                            <span class="education-location">
+                                <i class="fas fa-map-marker-alt"></i> {{ edu.location }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    {% if edu.grade %}
+                    <div class="education-grade">
+                        <strong>Grade:</strong> {{ edu.grade }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if edu.description %}
+                <div class="education-description">
+                    {{ edu.description_html|safe }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 <!-- Call to Action -->
 <section class="section cta-section">
     <h2>Interested in Working Together?</h2>
@@ -72,4 +205,80 @@
         <a href="{% url 'blog:post_list' %}" class="btn btn-outline">Read My Blog</a>
     </div>
 </section>
+
+<!-- Lead Capture Modal -->
+<div id="lead-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px;">
+        <span class="close" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+        <h2>Download CV</h2>
+        <p>Please enter your details to download the CV.</p>
+        <form id="lead-form">
+            <div style="margin-bottom: 15px;">
+                <label for="name" style="display: block; margin-bottom: 5px;">Name:</label>
+                <input type="text" id="name" name="name" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label for="email" style="display: block; margin-bottom: 5px;">Email:</label>
+                <input type="email" id="email" name="email" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label for="captcha" style="display: block; margin-bottom: 5px;">Security Question: What is 3 + 5?</label>
+                <input type="text" id="captcha" name="captcha" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" placeholder="Enter the number">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Download</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('lead-modal');
+        const btn = document.getElementById('download-cv-btn');
+        const span = document.getElementsByClassName('close')[0];
+        const form = document.getElementById('lead-form');
+
+        btn.onclick = function() {
+            modal.style.display = 'block';
+        }
+
+        span.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const captcha = document.getElementById('captcha').value;
+
+            fetch('{% url "portfolio:download_cv" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ name: name, email: email, captcha: captcha })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    modal.style.display = 'none';
+                    window.location.href = '{% url "portfolio:generate_pdf" %}';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+        }
+    });
+</script>
 {% endblock %}

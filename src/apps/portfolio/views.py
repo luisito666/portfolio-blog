@@ -1,7 +1,11 @@
 from django.shortcuts import render
-from django.views.generic import TemplateView
-from .models import About, Skill, Project, Experience
+from django.views.generic import TemplateView, View
+from django.http import HttpResponse, JsonResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from .models import About, Skill, Project, Experience, Summary, Certification, Education, Lead, SocialSettings
 import markdown
+import json
 
 class HomeView(TemplateView):
     """Main portfolio homepage view"""
@@ -54,6 +58,13 @@ class ExperienceListView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
+        # Get professional summary
+        summary = Summary.objects.first()
+        if summary:
+            # Convert markdown content to HTML
+            context['summary_html'] = markdown.markdown(summary.content, extensions=['extra', 'codehilite'])
+        context['summary'] = summary
+        
         # Get all experiences ordered by start date (most recent first)
         experiences = Experience.objects.all()
         for experience in experiences:
@@ -61,4 +72,101 @@ class ExperienceListView(TemplateView):
             experience.description_html = markdown.markdown(experience.description, extensions=['extra', 'codehilite'])
         context['experiences'] = experiences
         
+        # Get all certifications ordered by issue date (most recent first)
+        certifications = Certification.objects.all()
+        for certification in certifications:
+            if certification.description:
+                # Convert markdown description to HTML
+                certification.description_html = markdown.markdown(certification.description, extensions=['extra', 'codehilite'])
+        context['certifications'] = certifications
+        
+        # Get all education entries ordered by start date (most recent first)
+        education_list = Education.objects.all()
+        for education in education_list:
+            if education.description:
+                # Convert markdown description to HTML
+                education.description_html = markdown.markdown(education.description, extensions=['extra', 'codehilite'])
+        context['education_list'] = education_list
+        
         return context
+
+class DownloadCVView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            name = data.get('name')
+            email = data.get('email')
+            
+            captcha = data.get('captcha')
+            
+            if not name or not email:
+                return JsonResponse({'error': 'Name and email are required'}, status=400)
+            
+            if captcha != '8':
+                return JsonResponse({'error': 'Incorrect security question answer'}, status=400)
+            
+            Lead.objects.create(name=name, email=email)
+            
+            return JsonResponse({'success': True, 'message': 'Lead captured successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+class GeneratePDFView(View):
+    def get(self, request, *args, **kwargs):
+        summary = Summary.objects.first()
+        if summary:
+            summary.content_html = markdown.markdown(summary.content)
+
+        experiences = Experience.objects.all()
+        for exp in experiences:
+            exp.description_html = markdown.markdown(exp.description)
+
+        certifications = Certification.objects.all()
+        for cert in certifications:
+            if cert.description:
+                cert.description_html = markdown.markdown(cert.description)
+
+        education_list = Education.objects.all()
+        for edu in education_list:
+            if edu.description:
+                edu.description_html = markdown.markdown(edu.description)
+
+        skills = Skill.objects.all()
+        
+        # Group skills by category
+        skills_by_category = {}
+        for skill in skills:
+            if skill.category not in skills_by_category:
+                skills_by_category[skill.category] = []
+            skills_by_category[skill.category].append(skill)
+            
+        # Split categories into 3 columns
+        categories = list(skills_by_category.items())
+        skill_columns = [[], [], []]
+        for i, (cat, cat_skills) in enumerate(categories):
+            skill_columns[i % 3].append({'category': cat, 'skills': cat_skills})
+
+        social_settings = SocialSettings.objects.first()
+        
+        context = {
+            'summary': summary,
+            'experiences': experiences,
+            'certifications': certifications,
+            'education_list': education_list,
+            'skill_columns': skill_columns,
+            'social_settings': social_settings,
+            'user': request.user
+        }
+        
+        template_path = 'portfolio/cv_pdf.html'
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="cv.pdf"'
+        
+        template = get_template(template_path)
+        html = template.render(context)
+        
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        
+        if pisa_status.err:
+            return HttpResponse('We had some errors <pre>' + html + '</pre>')
+        return response
