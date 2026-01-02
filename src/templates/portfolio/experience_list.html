@@ -277,7 +277,8 @@
             .then(data => {
                 if (data.success) {
                     modal.style.display = 'none';
-                    window.location.href = '{% url "portfolio:generate_pdf" %}';
+                    // Redirect to PDF download with the token
+                    window.location.href = '{% url "portfolio:generate_pdf" %}?token=' + data.token;
                 } else {
                     alert('Error: ' + data.error);
                 }

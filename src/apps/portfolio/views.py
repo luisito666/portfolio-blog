@@ -2,12 +2,14 @@ from django.shortcuts import render
 from django.views.generic import TemplateView, View
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import get_template
+from django.core.signing import TimestampSigner
 from xhtml2pdf import pisa
 from .models import About, Skill, Project, Experience, Summary, Certification, Education, Lead, SocialSettings
 from django.conf import settings
 import markdown
 import json
 import requests
+import secrets
 
 class HomeView(TemplateView):
     """Main portfolio homepage view"""
@@ -121,12 +123,31 @@ class DownloadCVView(View):
             
             Lead.objects.create(name=name, email=email)
             
-            return JsonResponse({'success': True, 'message': 'Lead captured successfully'})
+            # Generate a signed token for PDF download (valid for 10 minutes)
+            signer = TimestampSigner()
+            token = signer.sign(secrets.token_hex(16))
+            
+            return JsonResponse({'success': True, 'message': 'Lead captured successfully', 'token': token})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
 class GeneratePDFView(View):
     def get(self, request, *args, **kwargs):
+        # Get token from query parameters
+        token = request.GET.get('token')
+        
+        if not token:
+            return HttpResponse('Access denied. Please complete the captcha first.', status=403)
+        
+        # Validate the token (must be signed within the last 10 minutes)
+        signer = TimestampSigner()
+        try:
+            # Unsing will raise BadSignature if token is invalid
+            # max_age=600 seconds = 10 minutes
+            original = signer.unsign(token, max_age=600)
+        except Exception:
+            return HttpResponse('Invalid or expired token. Please complete the captcha again.', status=403)
+        
         summary = Summary.objects.first()
         if summary:
             summary.content_html = markdown.markdown(summary.content)
