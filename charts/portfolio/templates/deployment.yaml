@@ -60,7 +60,7 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
         - name: nginx
-          image: "nginx:1.25.2"
+          image: "nginx:latest"
           ports:
             - name: http
               containerPort: 80
