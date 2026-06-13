@@ -51,10 +51,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Local apps
     'apps.portfolio',
     'apps.blog',
+
+    # Health checks for Kubernetes
+    'django_probes',
 ]
 
 MIDDLEWARE = [
@@ -153,5 +156,26 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+
+# Django Probes - Health Check Configuration
+# These endpoints bypass ALLOWED_HOSTS validation for Kubernetes probes
+PROBES = {
+    'health': {
+        'path': 'health',
+        'checks': (
+            'django_probes.checks.database',
+        ),
+    },
+    'readiness': {
+        'path': 'readiness',
+        'checks': (
+            'django_probes.checks.database',
+        ),
+    },
+    'liveness': {
+        'path': 'liveness',
+        'checks': (),  # No checks, just respond 200
+    },
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
