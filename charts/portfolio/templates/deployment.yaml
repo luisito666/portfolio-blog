@@ -68,6 +68,11 @@ spec:
           {{- end }}
           image: "nginx:latest"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/docker-entrypoint-override.sh"]
+          args:
+            - nginx
+            - -g
+            - daemon off;
           ports:
             - name: http
               containerPort: 80
@@ -77,6 +82,9 @@ spec:
               mountPath: /tmp
             - name: nginx-cache
               mountPath: /var/cache/nginx
+            - name: nginx-entrypoint
+              mountPath: /docker-entrypoint-override.sh
+              subPath: nginx-entrypoint.sh
           {{- with .Values.nginxResources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -102,6 +110,10 @@ spec:
         - name: nginx-cache
           emptyDir:
             sizeLimit: 64Mi
+        - name: nginx-entrypoint
+          configMap:
+            name: nginx-entrypoint-config
+            defaultMode: 0755
       {{- end }}
       {{- with .Values.volumesNginx }}
         {{- toYaml . | nindent 8 }}
