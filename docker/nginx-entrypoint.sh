@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+# Create necessary nginx temp directories
+# These are required by nginx but can't be created when root filesystem is read-only
+mkdir -p /var/cache/nginx/client_temp \
+         /var/cache/nginx/proxy_temp \
+         /var/cache/nginx/fastcgi_temp \
+         /var/cache/nginx/uwsgi_temp \
+         /var/cache/nginx/scgi_temp
+
+# Ensure permissions are correct (nginx runs as user 1000)
+chown -R 1000:1000 /var/cache/nginx
+
+# Execute the original nginx entrypoint
+exec /docker-entrypoint.sh "$@"
