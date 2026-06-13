@@ -18,13 +18,16 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from core import health
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apps.portfolio.urls', namespace='portfolio')),
     path('blog/', include('apps.blog.urls', namespace='blog')),
-    # Health check endpoints (bypass ALLOWED_HOSTS)
-    path('', include('django_probes.urls')),
+    # Health check endpoints (bypass ALLOWED_HOSTS via HealthCheckHostMiddleware)
+    path('health', health.health),
+    path('readiness', health.readiness),
+    path('liveness', health.liveness),
 ]
 
 # Serve media files in development

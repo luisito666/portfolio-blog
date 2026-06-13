@@ -377,7 +377,7 @@ helm uninstall blog-portfolio
 - **Secrets**: Credenciales de base de datos y SECRET_KEY
 - **PVC**: Persistent Volume Claims para media files
 - **HPA**: Horizontal Pod Autoscaler (opcional)
-- **Health Probes**: Liveness (`/liveness`) y readiness (`/readiness`) checks con django-probes
+- **Health Probes**: Liveness (`/liveness`) y readiness (`/readiness`) checks con middleware custom
 - **ServiceAccount**: Cuenta de servicio para el pod
 
 ---
@@ -459,15 +459,15 @@ Antes de desplegar en producción:
 
 ### Health Check Endpoints
 
-La aplicación expone endpoints para health checks de Kubernetes que bypass `ALLOWED_HOSTS`:
+La aplicación expone endpoints para health checks de Kubernetes que bypass `ALLOWED_HOSTS` mediante un middleware personalizado:
 
 | Endpoint | Verifica | Uso |
 |----------|----------|-----|
-| `GET /health` | Base de datos | Manual /健康检查 |
+| `GET /health` | Base de datos y cache | Manual / monitoreo |
 | `GET /readiness` | Base de datos | Readiness probe |
-| `GET /liveness` | Solo alive | Liveness probe |
+| `GET /liveness` | Servidor Django corriendo | Liveness probe |
 
-**Importante**: Estos endpoints están diseñados específicamente para probes de Kubernetes y no requieren validación de `ALLOWED_HOSTS`. El endpoint `/readiness` incluye verificación de conexión a la base de datos.
+**Implementación**: `HealthCheckHostMiddleware` (en `core/middleware.py`) extiende `CommonMiddleware` y omite la validación de `ALLOWED_HOSTS` para requests a estos paths, permitiendo que los probes de Kubernetes funcionen correctamente sin importar el header Host.
 
 ## Funcionalidades
 
