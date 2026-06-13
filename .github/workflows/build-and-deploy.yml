@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'charts/**'
 
 permissions:
   contents: write
@@ -18,24 +20,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if only chart files changed
-        id: chart-only
-        run: |
-          CHANGED=$(git diff --name-only HEAD~1 HEAD)
-          if [ -n "$CHANGED" ]; then
-            if echo "$CHANGED" | grep -qvE '^charts/'; then
-              echo "skip=false" >> "$GITHUB_OUTPUT"
-              echo "Non-chart files detected, proceeding with full build"
-            else
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              echo "Only chart files changed, skipping Docker build"
-            fi
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Generate semver tag
-        if: steps.chart-only.outputs.skip != 'true'
         run: |
           git fetch --tags
           LATEST_TAG=$(git tag -l 'v*.*.*' --sort=-version:refname | head -n 1)
@@ -57,24 +42,20 @@ jobs:
           echo "New version: $VERSION"
 
       - name: Create and push git tag
-        if: steps.chart-only.outputs.skip != 'true'
         run: |
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
 
       - name: Login to Container Registry
-        if: steps.chart-only.outputs.skip != 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Set up Docker Buildx
-        if: steps.chart-only.outputs.skip != 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push Docker image
-        if: steps.chart-only.outputs.skip != 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -86,12 +67,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Update dev.yaml image tag
-        if: steps.chart-only.outputs.skip != 'true'
         run: |
           sed -i "s|tag: .*|tag: ${{ env.VERSION }}|" charts/portfolio/values.yaml
 
       - name: Commit and push updated tag
-        if: steps.chart-only.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
