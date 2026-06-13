@@ -147,5 +147,9 @@ affinity: {}
 configmap:
   ALLOWED_HOSTS: luisito.dev,www.luisito.dev
   CSRF_TRUSTED_ORIGINS: https://luisito.dev,https://www.luisito.dev
-  DEBUG: "1"
+  # DEBUG must be "0" in production to prevent stack traces and
+  # sensitive config from being exposed to end users.
+  # Override via environment-specific values files (e.g. values-dev.yaml,
+  # values-prod.yaml) rather than changing this default.
+  DEBUG: "0"
   PDF_OWNER_NAME: Luis Albero Penagos
