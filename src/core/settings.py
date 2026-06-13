@@ -55,9 +55,6 @@ INSTALLED_APPS = [
     # Local apps
     'apps.portfolio',
     'apps.blog',
-
-    # django-probes provides wait_for_database management command
-    'django_probes',
 ]
 
 MIDDLEWARE = [

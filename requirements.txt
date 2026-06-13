@@ -9,4 +9,3 @@ python-decouple==3.8
 gunicorn==21.2.0
 xhtml2pdf==0.2.15
 requests==2.31.0
-django-probes==1.6.0
