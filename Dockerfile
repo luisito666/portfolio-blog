@@ -27,15 +27,22 @@ COPY ./src .
 # Create necessary directories
 RUN mkdir -p /app/staticfiles /app/media
 
+# Create non-root user and group for security
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+
 # Copy entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown appuser:appuser /entrypoint.sh
 
 # Expose port
 EXPOSE 8000
 
 # Set entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
+
+# Run as non-root user
+USER appuser
 
 # Set default command
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]
