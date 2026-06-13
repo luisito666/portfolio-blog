@@ -377,7 +377,7 @@ helm uninstall blog-portfolio
 - **Secrets**: Credenciales de base de datos y SECRET_KEY
 - **PVC**: Persistent Volume Claims para media files
 - **HPA**: Horizontal Pod Autoscaler (opcional)
-- **Health Probes**: Liveness y readiness checks en `/health`
+- **Health Probes**: Liveness (`/liveness`) y readiness (`/readiness`) checks con django-probes
 - **ServiceAccount**: Cuenta de servicio para el pod
 
 ---
@@ -456,6 +456,18 @@ Antes de desplegar en producción:
    - Configurar logging apropiado
    - Implementar métricas (Prometheus + Grafana)
    - Configurar alertas
+
+### Health Check Endpoints
+
+La aplicación expone endpoints para health checks de Kubernetes que bypass `ALLOWED_HOSTS`:
+
+| Endpoint | Verifica | Uso |
+|----------|----------|-----|
+| `GET /health` | Base de datos | Manual /健康检查 |
+| `GET /readiness` | Base de datos | Readiness probe |
+| `GET /liveness` | Solo alive | Liveness probe |
+
+**Importante**: Estos endpoints están diseñados específicamente para probes de Kubernetes y no requieren validación de `ALLOWED_HOSTS`. El endpoint `/readiness` incluye verificación de conexión a la base de datos.
 
 ## Funcionalidades
 
