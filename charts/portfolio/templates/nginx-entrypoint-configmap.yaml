@@ -22,3 +22,4 @@ data:
 
     # Execute the original nginx entrypoint
     exec /docker-entrypoint.sh "$@"
+  mode: "0755"
