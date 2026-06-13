@@ -23,6 +23,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apps.portfolio.urls', namespace='portfolio')),
     path('blog/', include('apps.blog.urls', namespace='blog')),
+    # Health check endpoints (bypass ALLOWED_HOSTS)
+    path('', include('django_probes.urls')),
 ]
 
 # Serve media files in development
