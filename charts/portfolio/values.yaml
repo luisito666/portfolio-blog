@@ -101,6 +101,27 @@ readinessProbe:
     path: /health
     port: http
 
+# The Django container currently has no health probes configured.
+# Liveness uses a higher initialDelaySeconds to allow for Django startup and database migrations.
+# Readiness uses a lower initialDelaySeconds since the app should respond quickly once running.
+portfolioLivenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 30
+  failureThreshold: 3
+  timeoutSeconds: 5
+
+portfolioReadinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+  timeoutSeconds: 3
+
 # This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
   enabled: false
