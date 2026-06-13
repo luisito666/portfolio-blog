@@ -55,10 +55,10 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          - name: tmp
-            mountPath: /tmp
-          {{- with .Values.volumeMounts }}
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
         - name: nginx
@@ -72,10 +72,11 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
-          - name: tmp
-            mountPath: /tmp
-          - name: nginx-cache
-            mountPath: /var/cache/nginx
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
           {{- with .Values.nginxResources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -95,16 +96,16 @@ spec:
       {{- with .Values.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: nginx-cache
+          emptyDir:
+            sizeLimit: 64Mi
       {{- end }}
       {{- with .Values.volumesNginx }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      - name: tmp
-        emptyDir:
-          sizeLimit: 64Mi
-      - name: nginx-cache
-        emptyDir:
-          sizeLimit: 64Mi
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
