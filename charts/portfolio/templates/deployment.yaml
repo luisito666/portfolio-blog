@@ -82,6 +82,8 @@ spec:
               mountPath: /tmp
             - name: nginx-cache
               mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /run
             - name: nginx-entrypoint
               mountPath: /scripts
           {{- with .Values.volumeMountsNginx }}
@@ -108,6 +110,9 @@ spec:
         - name: nginx-cache
           emptyDir:
             sizeLimit: 64Mi
+        - name: nginx-run
+          emptyDir:
+            sizeLimit: 10Mi
         - name: nginx-entrypoint
           configMap:
             name: nginx-entrypoint-config
