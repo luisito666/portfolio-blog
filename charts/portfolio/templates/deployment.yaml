@@ -84,6 +84,9 @@ spec:
               mountPath: /var/cache/nginx
             - name: nginx-entrypoint
               mountPath: /scripts
+          {{- with .Values.volumeMountsNginx }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with .Values.nginxResources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -94,10 +97,6 @@ spec:
           {{- end }}
           {{- with .Values.readinessProbe }}
           readinessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}          
-          {{- with .Values.volumeMountsNginx }}
-          volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
       {{- with .Values.volumes }}
