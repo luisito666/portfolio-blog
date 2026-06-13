@@ -168,6 +168,13 @@ tolerations: []
 
 affinity: {}
 
+# NetworkPolicy isolates pod traffic within the namespace.
+# Default deny all ingress/egress, then allow only what's needed:
+# - Ingress: NGINX Gateway (operations namespace) on port 80
+# - Egress: DNS (kube-system/kube-dns) on port 53, PostgreSQL (192.168.17.20) on port 5432
+networkPolicy:
+  enabled: true
+
 configmap:
   ALLOWED_HOSTS: luisito.dev,www.luisito.dev
   CSRF_TRUSTED_ORIGINS: https://luisito.dev,https://www.luisito.dev
