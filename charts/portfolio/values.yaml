@@ -171,19 +171,25 @@ affinity: {}
 # NetworkPolicy isolates pod traffic within the namespace.
 # Default deny all ingress/egress, then allow only what's needed:
 # - Ingress: NGINX Gateway (operations namespace) on port 80
-# - Egress: DNS (kube-system/kube-dns) on port 53, PostgreSQL (192.168.17.20) on port 5432
+# - Egress: DNS (kube-system/kube-dns) on port 53, PostgreSQL+NFS (192.168.17.20) on ports 5432+2049, Kubernetes API on port 443
 #
 # IMPORTANT NOTES:
 # 1. Pod-internal loopback traffic (localhost:127.0.0.1) is NOT affected by NetworkPolicy
 #    - NGINX container (port 80) communicates with Django (localhost:8000) without restrictions
-# 2. PostgreSQL IP (192.168.17.20) must match the IP in postgres-portfolio-secrets secret
-#    - If using hostname, the resolved IP must match this cidr
-# 3. Gateway selector (operations/gateway-nginx) must match your actual Gateway configuration
+# 2. Server 192.168.17.20 hosts BOTH PostgreSQL (port 5432) AND NFS (port 2049)
+#    - PostgreSQL IP must match the IP in postgres-portfolio-secrets secret
+#    - NFS is required for media-volume-claim (PersistentVolumeClaim with nfs-client storageClass)
+# 3. Kubernetes API server access is required for ConfigMap/Secret volume mounting
+#    - ConfigMaps: nginx-config, nginx-entrypoint-config
+#    - Secrets: postgres-portfolio-secrets, sensitive-data
+# 4. Gateway selector (operations/gateway-nginx) must match your actual Gateway configuration
 #    - Verify: kubectl get pods -n operations -l app.kubernetes.io/name=gateway-nginx
 #
 # VALIDATION CHECKLIST:
 # [ ] Gateway pod selector matches your actual Gateway configuration
 # [ ] PostgreSQL IP matches your DATABASE_URL in postgres-portfolio-secrets
+# [ ] NFS server (192.168.17.20) is accessible and running
+# [ ] Kubernetes API server selector/ipBlock matches your cluster configuration
 # [ ] CoreDNS pods exist in kube-system namespace with k8s-app=kube-dns label
 # [ ] After deployment: test connectivity from a pod (see Test Plan below)
 #
@@ -192,7 +198,10 @@ affinity: {}
 # 2. Test website accessibility: curl -I https://luisito.dev
 # 3. Test health checks: kubectl describe pod <pod-name> -n portfolio | grep -A 5 Liveness
 # 4. Test PostgreSQL connectivity: kubectl exec -n portfolio <pod-name> -- nc -zv 192.168.17.20 5432
-# 5. Verify isolation (should timeout): kubectl exec -n portfolio <pod-name> -- nc -zv <kube-system-pod-ip> 443
+# 5. Test NFS connectivity: kubectl exec -n portfolio <pod-name> -- nc -zv 192.168.17.20 2049
+# 6. Test Kubernetes API access: kubectl exec -n portfolio <pod-name> -- nc -zv kubernetes.default.svc 443
+# 7. Verify pod starts successfully with all volumes mounted: kubectl get pods -n portfolio
+# 8. Verify isolation (should timeout): kubectl exec -n portfolio <pod-name> -- nc -zv <kube-system-pod-ip> 443
 networkPolicy:
   enabled: true
 

@@ -5,16 +5,25 @@
 # 1. External Gateway (operations/gateway-nginx) → Service:80 → NGINX container:80 → Django:localhost:8000
 # 2. NetworkPolicy controls pod-level traffic, NOT loopback traffic within the same pod
 # 3. NGINX sidecar communicates with Django via localhost (127.0.0.1:8000) - unaffected by NetworkPolicy
+# 4. ConfigMaps/Secrets require Kubernetes API server access for volume mounting
+# 5. NFS volumes require NFS server access for mounting (media-volume-claim)
 #
 # RELATED FILES:
 # - HTTPRoute: charts/portfolio/templates/HTTPRoutes.yaml (defines Gateway → Service routing)
 # - Service: charts/portfolio/templates/service.yaml (defines port mappings)
 # - Deployment: charts/portfolio/templates/deployment.yaml (defines container ports)
+# - PVC: charts/portfolio/templates/pvc.yaml (defines NFS volume claim)
+#
+# SERVER DETAILS:
+# - 192.168.17.20 hosts BOTH PostgreSQL (port 5432) AND NFS (port 2049)
+# - PostgreSQL: Used by Django application for database connectivity
+# - NFS: Used for PersistentVolumeClaim media-volume-claim (storageClass: nfs-client)
 #
 # VALIDATION:
 # - Gateway selector: kubectl get pods -n operations -l app.kubernetes.io/name=gateway-nginx
 # - CoreDNS selector: kubectl get pods -n kube-system -l k8s-app=kube-dns
-# - PostgreSQL IP: Verify secret postgres-portfolio-secrets uses IP 192.168.17.20
+# - PostgreSQL+NFS: Verify both services are running on 192.168.17.20
+# - K8s API: kubectl get svc kubernetes -n default (or check API server IP)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -56,7 +65,8 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # Allow outbound to PostgreSQL (external server 192.168.17.20)
+    # Allow outbound to PostgreSQL and NFS (external server 192.168.17.20)
+    # This server hosts BOTH PostgreSQL (port 5432) and NFS (port 2049)
     # IMPORTANT: This IP must match the one in postgres-portfolio-secrets secret
     # To verify: kubectl get secret postgres-portfolio-secrets -n portfolio -o jsonpath='{.data.DATABASE_URL}' | base64 -d
     # If DATABASE_URL uses hostname instead of IP, this cidr must be updated to match the resolved IP
@@ -65,5 +75,23 @@ spec:
             cidr: 192.168.17.20/32
       ports:
         - protocol: TCP
-          port: 5432
+          port: 5432  # PostgreSQL database
+        - protocol: TCP
+          port: 2049  # NFS server for volume mounting (media-volume-claim)
+    # Allow outbound to Kubernetes API server (for ConfigMap/Secret mounting)
+    # ConfigMaps and Secrets mounted as volumes require communication with the API server
+    # ConfigMaps: nginx-config, nginx-entrypoint-config
+    # Secrets: postgres-portfolio-secrets, sensitive-data
+    # To verify API server location: kubectl get svc kubernetes -n default
+    # To verify pod selector: kubectl get pods -n default -l component=apiserver
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: default
+          podSelector:
+            matchLabels:
+              component: apiserver
+      ports:
+        - protocol: TCP
+          port: 443  # Kubernetes API server (HTTPS)
 {{- end }}
