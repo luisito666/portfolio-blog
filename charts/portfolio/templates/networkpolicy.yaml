@@ -1,4 +1,20 @@
 {{- if .Values.networkPolicy.enabled }}
+# NetworkPolicy for portfolio pods - implements default-deny traffic isolation
+#
+# TRAFFIC FLOW:
+# 1. External Gateway (operations/gateway-nginx) → Service:80 → NGINX container:80 → Django:localhost:8000
+# 2. NetworkPolicy controls pod-level traffic, NOT loopback traffic within the same pod
+# 3. NGINX sidecar communicates with Django via localhost (127.0.0.1:8000) - unaffected by NetworkPolicy
+#
+# RELATED FILES:
+# - HTTPRoute: charts/portfolio/templates/HTTPRoutes.yaml (defines Gateway → Service routing)
+# - Service: charts/portfolio/templates/service.yaml (defines port mappings)
+# - Deployment: charts/portfolio/templates/deployment.yaml (defines container ports)
+#
+# VALIDATION:
+# - Gateway selector: kubectl get pods -n operations -l app.kubernetes.io/name=gateway-nginx
+# - CoreDNS selector: kubectl get pods -n kube-system -l k8s-app=kube-dns
+# - PostgreSQL IP: Verify secret postgres-portfolio-secrets uses IP 192.168.17.20
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -14,6 +30,8 @@ spec:
     - Egress
   ingress:
     # Allow traffic from the NGINX Gateway (operations namespace)
+    # Gateway connects to Service port 80 → NGINX container port 80 → Django localhost:8000
+    # See: charts/portfolio/templates/HTTPRoutes.yaml
     - from:
         - namespaceSelector:
             matchLabels:
@@ -23,7 +41,7 @@ spec:
               app.kubernetes.io/name: gateway-nginx
       ports:
         - protocol: TCP
-          port: 80
+          port: 80  # Targets NGINX container (port name: http), which proxies to Django
   egress:
     # Allow DNS resolution (CoreDNS in kube-system)
     - to:
@@ -39,6 +57,9 @@ spec:
         - protocol: TCP
           port: 53
     # Allow outbound to PostgreSQL (external server 192.168.17.20)
+    # IMPORTANT: This IP must match the one in postgres-portfolio-secrets secret
+    # To verify: kubectl get secret postgres-portfolio-secrets -n portfolio -o jsonpath='{.data.DATABASE_URL}' | base64 -d
+    # If DATABASE_URL uses hostname instead of IP, this cidr must be updated to match the resolved IP
     - to:
         - ipBlock:
             cidr: 192.168.17.20/32
