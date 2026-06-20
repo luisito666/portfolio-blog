@@ -62,10 +62,10 @@
     --transition-base: all 0.2s ease;
 }
 
-/* Dark theme overrides */
-[data-theme="dark"] {
+/* Dark theme - activated via html.dark class */
+html.dark {
     --primary-color: #63b3ed;
-    --primary-hover: #4299e1;
+    --primary-hover: #7cbef2;
     --secondary-color: #e2e8f0;
     --text-color: #cbd5e0;
     --text-light: #a0aec0;
@@ -76,8 +76,8 @@
     --success-text: #9ae6b4;
     --error-bg: #63171b;
     --error-text: #fed7d7;
-    --gradient-start: #553c9a;
-    --gradient-end: #44337a;
+    --gradient-start: #4a3080;
+    --gradient-end: #3a2568;
     --heading-color: #f7fafc;
     --card-bg: #2d3748;
     --featured-border: #2b6cb0;
@@ -213,71 +213,38 @@ a:hover {
     gap: var(--spacing-lg);
 }
 
-/* Theme Toggle — pill switch */
+/* Theme Toggle - icon button */
 .theme-toggle {
-    background: var(--bg-alt);
-    border: 1px solid var(--border-color);
-    border-radius: 9999px;
-    width: 56px;
-    height: 28px;
-    padding: 0;
+    background: none;
+    border: none;
     cursor: pointer;
-    position: relative;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    transition: background-color 0.2s ease, color 0.2s ease;
     flex-shrink: 0;
 }
 
-.theme-toggle::after {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    transition: transform 0.3s ease, background-color 0.3s ease;
-}
-
-[data-theme="dark"] .theme-toggle::after {
-    transform: translateX(28px);
-    background: #f6ad55;
+.theme-toggle:hover {
+    background-color: var(--bg-alt);
+    color: var(--primary-color);
 }
 
 .theme-toggle .icon-sun,
 .theme-toggle .icon-moon {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    color: var(--text-light);
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-    line-height: 1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.theme-toggle .icon-sun {
-    right: 6px;
-    opacity: 0.5;
-}
+/* Light mode: show moon, hide sun */
+html:not(.dark) .theme-toggle .icon-sun { display: none; }
+html:not(.dark) .theme-toggle .icon-moon { display: block; }
 
-.theme-toggle .icon-moon {
-    left: 6px;
-    opacity: 0.5;
-}
-
-[data-theme="dark"] .theme-toggle .icon-sun {
-    opacity: 1;
-    color: #f6ad55;
-}
-
-[data-theme="dark"] .theme-toggle .icon-moon {
-    opacity: 0.3;
-}
-
-.theme-toggle:hover {
-    border-color: var(--primary-color);
-}
+/* Dark mode: show sun, hide moon */
+html.dark .theme-toggle .icon-sun { display: block; }
+html.dark .theme-toggle .icon-moon { display: none; }
 
 /* Mobile Menu Toggle */
 .nav-toggle {
