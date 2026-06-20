@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apps.portfolio.urls', namespace='portfolio')),
     path('blog/', include('apps.blog.urls', namespace='blog')),
+    path('api/v1/', include('apps.blog.api.urls', namespace='blog_api')),
     # Health check endpoints (bypass ALLOWED_HOSTS via HealthCheckHostMiddleware)
     path('health', health.health),
     path('readiness', health.readiness),
