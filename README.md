@@ -572,6 +572,48 @@ El proyecto incluye `populate_data.py` que genera:
 python populate_data.py
 ```
 
+## API REST (DRF + JWT)
+
+The blog exposes a JSON API under `/api/v1/`. Authenticate with username + password at `POST /api/v1/auth/login/` to receive an `access` token (1 h) and a `refresh` token (7 d). Pass the access token on writes via `Authorization: Bearer <access>`.
+
+### Endpoints
+
+| Method | Path                              | Auth | Description |
+|--------|-----------------------------------|------|-------------|
+| POST   | `/api/v1/auth/login/`             | No   | Exchange username + password for `access` + `refresh` |
+| POST   | `/api/v1/auth/refresh/`           | No   | Refresh the `access` token using a `refresh` |
+| GET    | `/api/v1/posts/`                  | No*  | List posts (anonymized: drafts hidden; auth: all) |
+| POST   | `/api/v1/posts/`                  | Yes  | Create a post |
+| GET    | `/api/v1/posts/<slug>/`           | No*  | Retrieve one post |
+| PATCH  | `/api/v1/posts/<slug>/`           | Yes  | Partial update |
+| PUT    | `/api/v1/posts/<slug>/`           | Yes  | Full update |
+| DELETE | `/api/v1/posts/<slug>/`           | Yes  | Delete a post |
+| GET    | `/api/v1/posts/published/`        | No   | List only published posts (paginated) |
+
+\* Reads are public for posts with `published=True`. To see drafts, include the JWT.
+
+### Example
+
+```bash
+# 1. Login
+curl -X POST http://localhost:8000/api/v1/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username":"blogger","password":"YOUR_PASSWORD"}'
+
+# 2. Create a post
+curl -X POST http://localhost:8000/api/v1/posts/ \
+  -H "Authorization: Bearer <access>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Hello API","content":"# h1\nmarkdown body","published":true}'
+```
+
+### Configuration
+
+- `ACCESS_TOKEN_LIFETIME`: 1 hour
+- `REFRESH_TOKEN_LIFETIME`: 7 days
+- `ROTATE_REFRESH_TOKENS`: true
+- `AUTH_HEADER_TYPES`: `Bearer`
+
 ## Licencia
 
 Este proyecto es de código abierto y está disponible para uso personal y educativo.
