@@ -28,6 +28,9 @@
                 <li><a href="{% url 'portfolio:experience_list' %}" class="{% if request.resolver_match.url_name == 'experience_list' %}active{% endif %}">Experience</a></li>
                 <li><a href="{% url 'blog:post_list' %}" class="{% if 'blog' in request.resolver_match.app_names %}active{% endif %}">Blog</a></li>
             </ul>
+            <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+            </button>
         </div>
     </nav>
 
@@ -80,16 +83,65 @@
 
     <!-- Scripts -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const navToggle = document.querySelector('.nav-toggle');
-            const navMenu = document.querySelector('.nav-menu');
-            
-            if (navToggle) {
-                navToggle.addEventListener('click', function() {
-                    navMenu.classList.toggle('active');
-                });
+        (function() {
+            // Theme toggle with localStorage persistence
+            const THEME_KEY = 'theme';
+            const DARK = 'dark';
+            const LIGHT = 'light';
+
+            function getPreferredTheme() {
+                const stored = localStorage.getItem(THEME_KEY);
+                if (stored) return stored;
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
             }
-        });
+
+            function applyTheme(theme) {
+                if (theme === DARK) {
+                    document.documentElement.setAttribute('data-theme', DARK);
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+            }
+
+            function updateIcon(theme) {
+                const icon = document.querySelector('.theme-toggle i');
+                if (!icon) return;
+                if (theme === DARK) {
+                    icon.className = 'fas fa-sun';
+                } else {
+                    icon.className = 'fas fa-moon';
+                }
+            }
+
+            // Apply on load
+            const currentTheme = getPreferredTheme();
+            applyTheme(currentTheme);
+            updateIcon(currentTheme);
+
+            // Toggle on click
+            document.addEventListener('DOMContentLoaded', function() {
+                const toggle = document.querySelector('.theme-toggle');
+                if (toggle) {
+                    toggle.addEventListener('click', function() {
+                        const isDark = document.documentElement.hasAttribute('data-theme');
+                        const newTheme = isDark ? LIGHT : DARK;
+                        applyTheme(newTheme);
+                        updateIcon(newTheme);
+                        localStorage.setItem(THEME_KEY, newTheme);
+                    });
+                }
+
+                // Mobile nav toggle
+                const navToggle = document.querySelector('.nav-toggle');
+                const navMenu = document.querySelector('.nav-menu');
+
+                if (navToggle) {
+                    navToggle.addEventListener('click', function() {
+                        navMenu.classList.toggle('active');
+                    });
+                }
+            });
+        })();
     </script>
     {% block scripts %}
     {% endblock %}
