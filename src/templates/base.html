@@ -34,14 +34,17 @@
                 <span></span>
                 <span></span>
             </button>
-            <ul class="nav-menu">
-                <li><a href="{% url 'portfolio:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Portfolio</a></li>
-                <li><a href="{% url 'portfolio:experience_list' %}" class="{% if request.resolver_match.url_name == 'experience_list' %}active{% endif %}">Experience</a></li>
-                <li><a href="{% url 'blog:post_list' %}" class="{% if 'blog' in request.resolver_match.app_names %}active{% endif %}">Blog</a></li>
-            </ul>
-            <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
-                <i class="fas fa-moon"></i>
-            </button>
+            <div class="nav-right">
+                <ul class="nav-menu">
+                    <li><a href="{% url 'portfolio:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Portfolio</a></li>
+                    <li><a href="{% url 'portfolio:experience_list' %}" class="{% if request.resolver_match.url_name == 'experience_list' %}active{% endif %}">Experience</a></li>
+                    <li><a href="{% url 'blog:post_list' %}" class="{% if 'blog' in request.resolver_match.app_names %}active{% endif %}">Blog</a></li>
+                </ul>
+                <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                    <span class="icon-moon">🌙</span>
+                    <span class="icon-sun">☀️</span>
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -94,19 +97,7 @@
 
     <!-- Scripts -->
     <script>
-        function updateIcon() {
-            const icon = document.querySelector('.theme-toggle i');
-            if (!icon) return;
-            if (document.documentElement.hasAttribute('data-theme')) {
-                icon.className = 'fas fa-sun';
-            } else {
-                icon.className = 'fas fa-moon';
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            updateIcon();
-
             const toggle = document.querySelector('.theme-toggle');
             if (toggle) {
                 toggle.addEventListener('click', function() {
@@ -118,7 +109,6 @@
                         document.documentElement.setAttribute('data-theme', 'dark');
                         localStorage.setItem('theme', 'dark');
                     }
-                    updateIcon();
                 });
             }
 
