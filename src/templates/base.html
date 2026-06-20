@@ -3,6 +3,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <script>
+        (function() {
+            var theme = localStorage.getItem("theme");
+            if (!theme) {
+                theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            }
+            if (theme === "dark") {
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Portfolio & Blog{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
@@ -28,6 +39,9 @@
                 <li><a href="{% url 'portfolio:experience_list' %}" class="{% if request.resolver_match.url_name == 'experience_list' %}active{% endif %}">Experience</a></li>
                 <li><a href="{% url 'blog:post_list' %}" class="{% if 'blog' in request.resolver_match.app_names %}active{% endif %}">Blog</a></li>
             </ul>
+            <button class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+            </button>
         </div>
     </nav>
 
@@ -80,10 +94,36 @@
 
     <!-- Scripts -->
     <script>
+        function updateIcon() {
+            const icon = document.querySelector('.theme-toggle i');
+            if (!icon) return;
+            if (document.documentElement.hasAttribute('data-theme')) {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            updateIcon();
+
+            const toggle = document.querySelector('.theme-toggle');
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    const isDark = document.documentElement.hasAttribute('data-theme');
+                    if (isDark) {
+                        document.documentElement.removeAttribute('data-theme');
+                        localStorage.setItem('theme', 'light');
+                    } else {
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        localStorage.setItem('theme', 'dark');
+                    }
+                    updateIcon();
+                });
+            }
+
             const navToggle = document.querySelector('.nav-toggle');
             const navMenu = document.querySelector('.nav-menu');
-            
             if (navToggle) {
                 navToggle.addEventListener('click', function() {
                     navMenu.classList.toggle('active');
