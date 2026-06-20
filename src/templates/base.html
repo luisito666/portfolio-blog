@@ -3,6 +3,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <script>
+        (function() {
+            var theme = localStorage.getItem("theme");
+            if (!theme) {
+                theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            }
+            if (theme === "dark") {
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Portfolio & Blog{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
@@ -83,65 +94,42 @@
 
     <!-- Scripts -->
     <script>
-        (function() {
-            // Theme toggle with localStorage persistence
-            const THEME_KEY = 'theme';
-            const DARK = 'dark';
-            const LIGHT = 'light';
+        function updateIcon() {
+            const icon = document.querySelector('.theme-toggle i');
+            if (!icon) return;
+            if (document.documentElement.hasAttribute('data-theme')) {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
 
-            function getPreferredTheme() {
-                const stored = localStorage.getItem(THEME_KEY);
-                if (stored) return stored;
-                return window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+        document.addEventListener('DOMContentLoaded', function() {
+            updateIcon();
+
+            const toggle = document.querySelector('.theme-toggle');
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    const isDark = document.documentElement.hasAttribute('data-theme');
+                    if (isDark) {
+                        document.documentElement.removeAttribute('data-theme');
+                        localStorage.setItem('theme', 'light');
+                    } else {
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        localStorage.setItem('theme', 'dark');
+                    }
+                    updateIcon();
+                });
             }
 
-            function applyTheme(theme) {
-                if (theme === DARK) {
-                    document.documentElement.setAttribute('data-theme', DARK);
-                } else {
-                    document.documentElement.removeAttribute('data-theme');
-                }
+            const navToggle = document.querySelector('.nav-toggle');
+            const navMenu = document.querySelector('.nav-menu');
+            if (navToggle) {
+                navToggle.addEventListener('click', function() {
+                    navMenu.classList.toggle('active');
+                });
             }
-
-            function updateIcon(theme) {
-                const icon = document.querySelector('.theme-toggle i');
-                if (!icon) return;
-                if (theme === DARK) {
-                    icon.className = 'fas fa-sun';
-                } else {
-                    icon.className = 'fas fa-moon';
-                }
-            }
-
-            // Apply on load
-            const currentTheme = getPreferredTheme();
-            applyTheme(currentTheme);
-            updateIcon(currentTheme);
-
-            // Toggle on click
-            document.addEventListener('DOMContentLoaded', function() {
-                const toggle = document.querySelector('.theme-toggle');
-                if (toggle) {
-                    toggle.addEventListener('click', function() {
-                        const isDark = document.documentElement.hasAttribute('data-theme');
-                        const newTheme = isDark ? LIGHT : DARK;
-                        applyTheme(newTheme);
-                        updateIcon(newTheme);
-                        localStorage.setItem(THEME_KEY, newTheme);
-                    });
-                }
-
-                // Mobile nav toggle
-                const navToggle = document.querySelector('.nav-toggle');
-                const navMenu = document.querySelector('.nav-menu');
-
-                if (navToggle) {
-                    navToggle.addEventListener('click', function() {
-                        navMenu.classList.toggle('active');
-                    });
-                }
-            });
-        })();
+        });
     </script>
     {% block scripts %}
     {% endblock %}
