@@ -214,3 +214,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# codebase-memory MCP: knowledge graph (do not commit)
+.codebase-memory/
