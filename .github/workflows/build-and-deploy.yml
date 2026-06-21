@@ -19,6 +19,8 @@ jobs:
   test:
     name: Run Django tests
     runs-on: ubuntu-latest
+    # Run tests on PRs and on push to main. The build job is push-to-main
+    # only (no pull_request trigger) so it keeps its original behavior.
 
     steps:
       - name: Checkout
@@ -41,6 +43,10 @@ jobs:
           python manage.py test -v 2 --settings=core.test_settings
 
   build-and-deploy:
+    # Only run on push to main (not pull_request) to preserve the original
+    # behavior of tagging and pushing the image. Use workflow_run or branch
+    # protection to gate this job on the test job if needed.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
