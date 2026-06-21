@@ -10,8 +10,12 @@ Un blog personal y portfolio profesional construido con Django, diseñado para d
 - [Instalación y Despliegue](#instalación-y-despliegue)
   - [Desarrollo con Docker](#desarrollo-con-docker-recomendado)
   - [Kubernetes con Helm](#kubernetes-con-helm)
+    - [Network Policy](#network-policy)
+- [CI/CD](#cicd)
+- [Tests](#tests)
 - [Configuración](#configuración)
 - [Funcionalidades](#funcionalidades)
+  - [API REST del Blog (DRF + JWT)](#api-rest-del-blog-drf--jwt)
 - [Modelos de Datos](#modelos-de-datos)
 - [Editor Markdown](#editor-markdown)
 - [Licencia](#licencia)
@@ -379,6 +383,92 @@ helm uninstall blog-portfolio
 - **HPA**: Horizontal Pod Autoscaler (opcional)
 - **Health Probes**: Liveness (`/liveness`) y readiness (`/readiness`) checks con middleware custom
 - **ServiceAccount**: Cuenta de servicio para el pod
+- **NetworkPolicy**: Aislamiento de tráfico con política *default-deny* (opcional)
+
+#### Network Policy
+
+El chart incluye una `NetworkPolicy` (`charts/portfolio/templates/networkpolicy.yaml`) que implementa
+aislamiento de tráfico con una política **default-deny**: salvo lo que se permite explícitamente, todo
+el tráfico de entrada y salida del pod queda bloqueado. Aplica tanto a `Ingress` como a `Egress`.
+
+La política está condicionada a `networkPolicy.enabled` en `values.yaml` (habilitada por defecto):
+
+```yaml
+networkPolicy:
+  enabled: true
+```
+
+**Ingress (entrada)** — solo se permite tráfico desde el Gateway NGINX:
+
+| Origen | Selector | Puerto |
+|--------|----------|--------|
+| Gateway NGINX (namespace `operations`) | `app.kubernetes.io/name=gateway-nginx` | TCP 80 |
+
+> El tráfico llega al Service (puerto 80) → contenedor NGINX → Django en `localhost:8000`. La comunicación
+> NGINX ↔ Django ocurre por loopback dentro del mismo pod, por lo que no se ve afectada por la NetworkPolicy.
+
+**Egress (salida)** — solo se permiten estos destinos:
+
+| Destino | Selector / CIDR | Puerto |
+|---------|-----------------|--------|
+| DNS (CoreDNS en `kube-system`) | `k8s-app=kube-dns` | UDP 53 y TCP 53 |
+| PostgreSQL | `192.168.17.20/32` | TCP 5432 |
+| NFS (montaje de `media-volume-claim`) | `192.168.17.20/32` | TCP 2049 |
+| API Server de Kubernetes (montaje de ConfigMaps/Secrets) | `component=apiserver` (namespace `default`) | TCP 443 |
+
+> **Nota**: El servidor `192.168.17.20` aloja **tanto PostgreSQL (5432) como NFS (2049)**. Si la
+> `DATABASE_URL` del secret usa un hostname en lugar de IP, el CIDR de la política debe actualizarse para
+> coincidir con la IP resuelta.
+
+---
+
+## CI/CD
+
+El proyecto incluye un pipeline de GitHub Actions definido en `.github/workflows/build-and-deploy.yml`.
+
+**Disparadores**:
+- `push` a la rama `main`
+- `pull_request` contra `main`
+
+(Ambos ignoran cambios en `charts/**` mediante `paths-ignore`.)
+
+**Jobs**:
+
+| Job | Cuándo se ejecuta | Descripción |
+|-----|-------------------|-------------|
+| `test` (Run Django tests) | En cada PR y en push a `main` | Instala dependencias y ejecuta la suite de tests con `python manage.py test -v 2 --settings=core.test_settings` |
+| `build-and-deploy` | Solo en push a `main` (`github.ref == refs/heads/main`) | Genera un tag semver, construye la imagen Docker, la publica en el registry y actualiza el chart de Helm |
+
+El job `build-and-deploy` está condicionado a `github.event_name == 'push'`, por lo que **en los Pull
+Requests solo corren los tests** (el build/deploy se omite). Su flujo es:
+
+1. Genera el siguiente tag semver a partir del último tag `vX.Y.Z` (incrementa el *patch*).
+2. Crea y publica el tag git.
+3. Construye y publica la imagen `luisito666/blog:<version>` y `luisito666/blog:latest`.
+4. Actualiza el campo `tag` de la imagen en `charts/portfolio/values.yaml` con la nueva versión.
+5. Hace commit y push del `values.yaml` actualizado a `main`.
+
+---
+
+## Tests
+
+El proyecto cuenta con una suite de tests organizada por aplicación:
+
+| Ubicación | Cobertura |
+|-----------|-----------|
+| `src/apps/portfolio/tests/` | Tests de modelos, vistas, URLs, admin y context processors |
+| `src/apps/blog/tests/` | Tests de modelos, vistas, serializers, admin y API |
+| `src/core/tests/` | Tests de health checks y middleware |
+
+**Ejecutar la suite completa**:
+
+```bash
+cd src
+python manage.py test --settings=core.test_settings
+```
+
+Actualmente hay **218 tests** que pasan en ~0.6s. Estos mismos tests se ejecutan automáticamente en el
+pipeline de [CI/CD](#cicd) en cada Pull Request y push a `main`.
 
 ---
 
@@ -487,6 +577,58 @@ La aplicación expone endpoints para health checks de Kubernetes que bypass `ALL
 - **Resaltado de Código**: Sintaxis highlighting para bloques de código
 - **Imágenes Destacadas**: Cada post puede tener una imagen principal
 
+#### API REST del Blog (DRF + JWT)
+
+El blog expone una API REST en JSON para la gestión de publicaciones, construida con **Django REST
+Framework** y autenticación **JWT** mediante `djangorestframework-simplejwt`. El código vive en
+`src/apps/blog/api/` (`serializers.py`, `views.py`, `urls.py`) y se monta en `/api/v1/` (ver
+`src/core/urls.py`).
+
+**Autenticación**: solicita tokens en `POST /api/v1/auth/login/` con `username` y `password`. La respuesta
+incluye un token `access` (vigencia 1 h) y un token `refresh` (vigencia 7 d). Para las operaciones de
+escritura, envía el token de acceso en la cabecera `Authorization: Bearer <access>`.
+
+**Endpoints**:
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| POST | `/api/v1/auth/login/` | No | Intercambia `username` + `password` por tokens `access` + `refresh` |
+| POST | `/api/v1/auth/refresh/` | No | Renueva el token `access` a partir de un `refresh` |
+| GET | `/api/v1/posts/` | No* | Lista las publicaciones |
+| POST | `/api/v1/posts/` | Sí | Crea una publicación |
+| GET | `/api/v1/posts/<slug>/` | No* | Obtiene una publicación |
+| PUT | `/api/v1/posts/<slug>/` | Sí | Actualización completa |
+| PATCH | `/api/v1/posts/<slug>/` | Sí | Actualización parcial |
+| DELETE | `/api/v1/posts/<slug>/` | Sí | Elimina una publicación |
+| GET | `/api/v1/posts/published/` | No | Lista solo las publicaciones publicadas (paginada) |
+
+> \* Las lecturas son públicas para las publicaciones con `published=True`. Las peticiones anónimas no ven
+> los borradores; incluyendo un JWT válido se obtienen todas las publicaciones. Las publicaciones se
+> identifican por su `slug` (no por `id`).
+
+**Ejemplo de uso**:
+
+```bash
+# 1. Login (obtener tokens)
+curl -X POST http://localhost:8000/api/v1/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username":"blogger","password":"TU_PASSWORD"}'
+
+# 2. Crear una publicación (requiere Bearer token)
+curl -X POST http://localhost:8000/api/v1/posts/ \
+  -H "Authorization: Bearer <access>" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Hola API","content":"# Título\nCuerpo en markdown","published":true}'
+```
+
+**Configuración JWT** (`src/core/settings.py`):
+
+- `ACCESS_TOKEN_LIFETIME`: 1 hora
+- `REFRESH_TOKEN_LIFETIME`: 7 días
+- `ROTATE_REFRESH_TOKENS`: `True`
+- `AUTH_HEADER_TYPES`: `Bearer`
+- Paginación por defecto: `PageNumberPagination` con `PAGE_SIZE` de 10
+
 ## Modelos de Datos
 
 ### Blog
@@ -571,48 +713,6 @@ El proyecto incluye `populate_data.py` que genera:
 ```bash
 python populate_data.py
 ```
-
-## API REST (DRF + JWT)
-
-The blog exposes a JSON API under `/api/v1/`. Authenticate with username + password at `POST /api/v1/auth/login/` to receive an `access` token (1 h) and a `refresh` token (7 d). Pass the access token on writes via `Authorization: Bearer <access>`.
-
-### Endpoints
-
-| Method | Path                              | Auth | Description |
-|--------|-----------------------------------|------|-------------|
-| POST   | `/api/v1/auth/login/`             | No   | Exchange username + password for `access` + `refresh` |
-| POST   | `/api/v1/auth/refresh/`           | No   | Refresh the `access` token using a `refresh` |
-| GET    | `/api/v1/posts/`                  | No*  | List posts (anonymized: drafts hidden; auth: all) |
-| POST   | `/api/v1/posts/`                  | Yes  | Create a post |
-| GET    | `/api/v1/posts/<slug>/`           | No*  | Retrieve one post |
-| PATCH  | `/api/v1/posts/<slug>/`           | Yes  | Partial update |
-| PUT    | `/api/v1/posts/<slug>/`           | Yes  | Full update |
-| DELETE | `/api/v1/posts/<slug>/`           | Yes  | Delete a post |
-| GET    | `/api/v1/posts/published/`        | No   | List only published posts (paginated) |
-
-\* Reads are public for posts with `published=True`. To see drafts, include the JWT.
-
-### Example
-
-```bash
-# 1. Login
-curl -X POST http://localhost:8000/api/v1/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"username":"blogger","password":"YOUR_PASSWORD"}'
-
-# 2. Create a post
-curl -X POST http://localhost:8000/api/v1/posts/ \
-  -H "Authorization: Bearer <access>" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Hello API","content":"# h1\nmarkdown body","published":true}'
-```
-
-### Configuration
-
-- `ACCESS_TOKEN_LIFETIME`: 1 hour
-- `REFRESH_TOKEN_LIFETIME`: 7 days
-- `ROTATE_REFRESH_TOKENS`: true
-- `AUTH_HEADER_TYPES`: `Bearer`
 
 ## Licencia
 
