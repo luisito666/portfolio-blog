@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.views.generic import TemplateView, View
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import get_template
@@ -49,7 +49,7 @@ class ProjectDetailView(TemplateView):
     
     def get_context_data(self, pk, **kwargs):
         context = super().get_context_data(**kwargs)
-        project = Project.objects.get(pk=pk)
+        project = get_object_or_404(Project, pk=pk)
         # Convert markdown description to HTML
         context['project_description_html'] = markdown.markdown(project.description, extensions=['extra', 'codehilite'])
         context['project'] = project

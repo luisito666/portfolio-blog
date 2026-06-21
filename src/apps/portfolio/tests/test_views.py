@@ -95,10 +95,10 @@ class TestProjectDetailView(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.context['project'], self.project)
 
-    def test_nonexistent_pk_raises_does_not_exist(self):
+    def test_nonexistent_pk_returns_404(self):
         url = reverse('portfolio:project_detail', kwargs={'pk': 99999})
-        with self.assertRaises(Project.DoesNotExist):
-            self.client.get(url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
 
     def test_url_name_reverses_correctly(self):
         url = reverse('portfolio:project_detail', kwargs={'pk': self.project.pk})
