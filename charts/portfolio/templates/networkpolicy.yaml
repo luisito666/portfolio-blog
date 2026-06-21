@@ -20,9 +20,9 @@
 # - NFS: Used for PersistentVolumeClaim media-volume-claim (storageClass: nfs-client)
 #
 # VALIDATION:
-# - Gateway selector: kubectl get pods -n operations -l app.kubernetes.io/name=gateway-nginx
-# - CoreDNS selector: kubectl get pods -n kube-system -l k8s-app=kube-dns
-# - PostgreSQL+NFS: Verify both services are running on 192.168.17.20
+# - Gateway selector: kubectl get pods -n {{ .Values.networkPolicy.gateway.namespace }} -l app.kubernetes.io/name=gateway-nginx
+# - CoreDNS selector: kubectl get pods -n {{ .Values.networkPolicy.dns.namespace }} -l {{ range $k, $v := .Values.networkPolicy.dns.podLabels }}{{ $k }}={{ $v }}{{ end }}
+# - PostgreSQL+NFS: Verify both services are running on {{ .Values.networkPolicy.postgresNfs.cidr }}
 # - K8s API: kubectl get svc kubernetes -n default (or check API server IP)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -44,10 +44,12 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: operations
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.gateway.namespace }}
           podSelector:
             matchLabels:
-              app.kubernetes.io/name: gateway-nginx
+              {{- range $k, $v := .Values.networkPolicy.gateway.podLabels }}
+              {{ $k }}: {{ $v }}
+              {{- end }}
       ports:
         - protocol: TCP
           port: 80  # Targets NGINX container (port name: http), which proxies to Django
@@ -56,23 +58,25 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: kube-system
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.dns.namespace }}
           podSelector:
             matchLabels:
-              k8s-app: kube-dns
+              {{- range $k, $v := .Values.networkPolicy.dns.podLabels }}
+              {{ $k }}: {{ $v }}
+              {{- end }}
       ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
-    # Allow outbound to PostgreSQL and NFS (external server 192.168.17.20)
+    # Allow outbound to PostgreSQL and NFS (external server)
     # This server hosts BOTH PostgreSQL (port 5432) and NFS (port 2049)
     # IMPORTANT: This IP must match the one in postgres-portfolio-secrets secret
     # To verify: kubectl get secret postgres-portfolio-secrets -n portfolio -o jsonpath='{.data.DATABASE_URL}' | base64 -d
     # If DATABASE_URL uses hostname instead of IP, this cidr must be updated to match the resolved IP
     - to:
         - ipBlock:
-            cidr: 192.168.17.20/32
+            cidr: {{ .Values.networkPolicy.postgresNfs.cidr }}
       ports:
         - protocol: TCP
           port: 5432  # PostgreSQL database
@@ -83,14 +87,16 @@ spec:
     # ConfigMaps: nginx-config, nginx-entrypoint-config
     # Secrets: postgres-portfolio-secrets, sensitive-data
     # To verify API server location: kubectl get svc kubernetes -n default
-    # To verify pod selector: kubectl get pods -n default -l component=apiserver
+    # To verify pod selector: kubectl get pods -n {{ .Values.networkPolicy.kubernetesApi.namespace }} -l component=apiserver
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: default
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.kubernetesApi.namespace }}
           podSelector:
             matchLabels:
-              component: apiserver
+              {{- range $k, $v := .Values.networkPolicy.kubernetesApi.podLabels }}
+              {{ $k }}: {{ $v }}
+              {{- end }}
       ports:
         - protocol: TCP
           port: 443  # Kubernetes API server (HTTPS)

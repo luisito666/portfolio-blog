@@ -204,6 +204,20 @@ affinity: {}
 # 8. Verify isolation (should timeout): kubectl exec -n portfolio <pod-name> -- nc -zv <kube-system-pod-ip> 443
 networkPolicy:
   enabled: true
+  gateway:
+    namespace: operations
+    podLabels:
+      app.kubernetes.io/name: gateway-nginx
+  dns:
+    namespace: kube-system
+    podLabels:
+      k8s-app: kube-dns
+  postgresNfs:
+    cidr: 192.168.17.20/32
+  kubernetesApi:
+    namespace: default
+    podLabels:
+      component: apiserver
 
 configmap:
   ALLOWED_HOSTS: luisito.dev,www.luisito.dev
