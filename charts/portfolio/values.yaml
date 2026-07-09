@@ -75,13 +75,14 @@ ingress:
 
 # Based on actual cluster usage (portfolio: ~1m CPU / 99Mi RAM, nginx: ~1m CPU / 5Mi RAM).
 # Requests guarantee minimum allocation; limits cap maximum to prevent noisy neighbors.
+# Increased limits for PDF generation with xhtml2pdf which requires more CPU and memory.
 resources:
   requests:
-    cpu: 50m
-    memory: 128Mi
+    cpu: 250m
+    memory: 512Mi
   limits:
-    cpu: 500m
-    memory: 256Mi
+    cpu: 2000m
+    memory: 1Gi
 
 nginxResources:
   requests:

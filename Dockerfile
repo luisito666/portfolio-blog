@@ -44,5 +44,5 @@ ENTRYPOINT ["/entrypoint.sh"]
 # Run as non-root user
 USER appuser
 
-# Set default command
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]
+# Set default command with increased timeout for PDF generation
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--timeout", "120", "core.wsgi:application"]
