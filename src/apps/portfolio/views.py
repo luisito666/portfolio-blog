@@ -3,7 +3,7 @@ from django.views.generic import TemplateView, View
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import get_template
 from django.core.signing import TimestampSigner
-from xhtml2pdf import pisa
+from weasyprint import HTML
 from .models import About, Skill, Project, Experience, Summary, Certification, Education, Lead, SocialSettings
 from django.conf import settings
 import markdown
@@ -197,12 +197,11 @@ class GeneratePDFView(View):
         template_path = 'portfolio/cv_pdf.html'
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="cv.pdf"'
-        
+
         template = get_template(template_path)
         html = template.render(context)
-        
-        pisa_status = pisa.CreatePDF(html, dest=response)
-        
-        if pisa_status.err:
-            return HttpResponse('We had some errors <pre>' + html + '</pre>')
+
+        # Generate PDF using WeasyPrint (faster and more reliable than xhtml2pdf)
+        HTML(string=html).write_pdf(response)
+
         return response

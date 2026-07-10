@@ -15,6 +15,12 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     libpq-dev \
     netcat-openbsd \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
@@ -29,7 +35,8 @@ RUN mkdir -p /app/staticfiles /app/media
 
 # Create non-root user and group for security
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser \
-    && chown -R appuser:appuser /app
+    && chown -R appuser:appuser /app \
+    && chmod -R 755 /app/staticfiles /app/media
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
