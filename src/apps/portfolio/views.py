@@ -109,14 +109,18 @@ class DownloadCVView(View):
                 return JsonResponse({'error': 'Name and email are required'}, status=400)
             
             # Verify reCAPTCHA
-            recaptcha_response = requests.post(
-                'https://www.google.com/recaptcha/api/siteverify',
-                data={
-                    'secret': settings.RECAPTCHA_PRIVATE_KEY,
-                    'response': captcha
-                }
-            )
-            result = recaptcha_response.json()
+            try:
+                recaptcha_response = requests.post(
+                    'https://www.google.com/recaptcha/api/siteverify',
+                    data={
+                        'secret': settings.RECAPTCHA_PRIVATE_KEY,
+                        'response': captcha
+                    },
+                    timeout=10
+                )
+                result = recaptcha_response.json()
+            except requests.exceptions.RequestException:
+                return JsonResponse({'error': 'Could not verify captcha. Please try again.'}, status=503)
             
             if not result.get('success'):
                 return JsonResponse({'error': 'Invalid reCAPTCHA. Please try again.'}, status=400)
@@ -200,8 +204,8 @@ class GeneratePDFView(View):
 
         template = get_template(template_path)
         html = template.render(context)
-
-        # Generate PDF using WeasyPrint (faster and more reliable than xhtml2pdf)
+        
+        # Generate PDF using WeasyPrint
         HTML(string=html).write_pdf(response)
 
         return response
