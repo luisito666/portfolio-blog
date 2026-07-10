@@ -138,6 +138,9 @@ volumes:
   - name: cache-volume-static
     emptyDir:
       sizeLimit: 500Mi
+  - name: cache-volume-fontconfig
+    emptyDir:
+      sizeLimit: 10Mi
   - name: media-volume
     persistentVolumeClaim:
       claimName: media-volume-claim
@@ -159,6 +162,8 @@ volumesNginx:
 volumeMounts: 
   - name: cache-volume-static
     mountPath: /app/staticfiles
+  - name: cache-volume-fontconfig
+    mountPath: /app/.cache/fontconfig
   - name: media-volume
     mountPath: /app/media
 
