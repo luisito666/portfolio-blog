@@ -218,6 +218,13 @@ networkPolicy:
     namespace: default
     podLabels:
       component: apiserver
+  # Allow outbound HTTPS (port 443) to any external IP — required for Google reCAPTCHA verification.
+  # reCAPTCHA API is at google.com/recaptcha/api/siteverify and uses Google's dynamic IP ranges.
+  # If you need to restrict further, replace 0.0.0.0/0 with Google's published IP ranges:
+  # https://www.gstatic.com/ipranges/goog.json
+  externalHttps:
+    enabled: true
+    cidr: 0.0.0.0/0
 
 configmap:
   ALLOWED_HOSTS: luisito.dev,www.luisito.dev

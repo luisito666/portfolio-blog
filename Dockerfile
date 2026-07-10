@@ -15,6 +15,11 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     libpq-dev \
     netcat-openbsd \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libpangoft2-1.0-0 \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
@@ -25,7 +30,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./src .
 
 # Create necessary directories
-RUN mkdir -p /app/staticfiles /app/media
+RUN mkdir -p /app/staticfiles /app/media /app/.cache/fontconfig
 
 # Create non-root user and group for security
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser \

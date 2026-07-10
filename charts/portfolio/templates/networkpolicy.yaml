@@ -100,4 +100,14 @@ spec:
       ports:
         - protocol: TCP
           port: 443  # Kubernetes API server (HTTPS)
+    # Allow outbound HTTPS (external) — required for Google reCAPTCHA verification
+    # Only added if externalHttps.enabled is true
+    {{- if .Values.networkPolicy.externalHttps.enabled }}
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.externalHttps.cidr }}
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- end }}
 {{- end }}
