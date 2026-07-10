@@ -201,7 +201,7 @@ class GeneratePDFView(View):
         template_path = 'portfolio/cv_pdf.html'
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="cv.pdf"'
-        
+
         template = get_template(template_path)
         html = template.render(context)
         

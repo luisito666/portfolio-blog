@@ -34,7 +34,8 @@ RUN mkdir -p /app/staticfiles /app/media /app/.cache/fontconfig
 
 # Create non-root user and group for security
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser \
-    && chown -R appuser:appuser /app
+    && chown -R appuser:appuser /app \
+    && chmod -R 755 /app/staticfiles /app/media
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
@@ -49,5 +50,5 @@ ENTRYPOINT ["/entrypoint.sh"]
 # Run as non-root user
 USER appuser
 
-# Set default command
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]
+# Set default command with increased timeout for PDF generation
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--timeout", "120", "core.wsgi:application"]

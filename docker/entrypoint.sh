@@ -60,7 +60,9 @@ run_migrations() {
 # Function to collect static files
 collect_static() {
     echo "Collecting static files..."
-    python manage.py collectstatic --noinput
+    # Clear existing static files to avoid permission issues
+    rm -rf /app/staticfiles/*
+    python manage.py collectstatic --noinput --clear
 }
 
 # Main execution
