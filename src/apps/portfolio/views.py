@@ -199,13 +199,18 @@ class GeneratePDFView(View):
         }
         
         template_path = 'portfolio/cv_pdf.html'
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="cv.pdf"'
-
         template = get_template(template_path)
         html = template.render(context)
-        
+
         # Generate PDF using WeasyPrint
-        HTML(string=html).write_pdf(response)
+        try:
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="cv.pdf"'
+            HTML(string=html).write_pdf(response)
+        except Exception:
+            return HttpResponse(
+                'We had some errors generating your PDF. Please try again later.',
+                status=500,
+            )
 
         return response

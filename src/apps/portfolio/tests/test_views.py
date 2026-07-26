@@ -280,36 +280,34 @@ class TestGeneratePDFView(TestCase):
         signer = TimestampSigner()
         token = signer.sign(secrets.token_hex(16))
 
-        with patch('apps.portfolio.views.pisa') as mock_pisa, \
+        with patch('apps.portfolio.views.HTML') as mock_html, \
              patch('apps.portfolio.views.get_template') as mock_get_template:
             mock_template = MagicMock()
             mock_template.render.return_value = '<html><body>CV</body></html>'
             mock_get_template.return_value = mock_template
 
-            mock_status = MagicMock()
-            mock_status.err = False
-            mock_pisa.CreatePDF.return_value = mock_status
+            mock_html_instance = MagicMock()
+            mock_html.return_value = mock_html_instance
 
             response = self.client.get(self.URL + f'?token={token}')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
+        mock_html_instance.write_pdf.assert_called_once()
 
-    def test_pisa_error_returns_error_response(self):
+    def test_weasyprint_error_returns_error_response(self):
         signer = TimestampSigner()
         token = signer.sign(secrets.token_hex(16))
 
-        with patch('apps.portfolio.views.pisa') as mock_pisa, \
+        with patch('apps.portfolio.views.HTML') as mock_html, \
              patch('apps.portfolio.views.get_template') as mock_get_template:
             mock_template = MagicMock()
             mock_template.render.return_value = '<html><body>CV</body></html>'
             mock_get_template.return_value = mock_template
 
-            mock_status = MagicMock()
-            mock_status.err = True
-            mock_pisa.CreatePDF.return_value = mock_status
+            mock_html.side_effect = Exception('WeasyPrint render failed')
 
             response = self.client.get(self.URL + f'?token={token}')
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 500)
         self.assertIn(b'We had some errors', response.content)
