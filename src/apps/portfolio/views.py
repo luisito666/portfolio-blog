@@ -5,6 +5,8 @@ from django.template.loader import get_template
 from django.core.signing import TimestampSigner
 from weasyprint import HTML
 from .models import About, Skill, Project, Experience, Summary, Certification, Education, Lead, SocialSettings
+from apps.cv_assistant.services.cv_builder import build_cv_context
+from apps.cv_assistant.services.pdf_generator import generate_cv_pdf
 from django.conf import settings
 import markdown
 import json
@@ -152,61 +154,18 @@ class GeneratePDFView(View):
         except Exception:
             return HttpResponse('Invalid or expired token. Please complete the captcha again.', status=403)
         
-        summary = Summary.objects.first()
-        if summary:
-            summary.content_html = markdown.markdown(summary.content)
+        # Build the CV context using the reusable service (mirrors the
+        # previous inline portfolio-model extraction). ``user`` is preserved
+        # for parity with the previous inline implementation.
+        context = build_cv_context()
+        context['user'] = request.user
 
-        experiences = Experience.objects.all()
-        for exp in experiences:
-            exp.description_html = markdown.markdown(exp.description)
-
-        certifications = Certification.objects.all()
-        for cert in certifications:
-            if cert.description:
-                cert.description_html = markdown.markdown(cert.description)
-
-        education_list = Education.objects.all()
-        for edu in education_list:
-            if edu.description:
-                edu.description_html = markdown.markdown(edu.description)
-
-        skills = Skill.objects.all()
-        
-        # Group skills by category
-        skills_by_category = {}
-        for skill in skills:
-            if skill.category not in skills_by_category:
-                skills_by_category[skill.category] = []
-            skills_by_category[skill.category].append(skill)
-            
-        # Split categories into 3 columns
-        categories = list(skills_by_category.items())
-        skill_columns = [[], [], []]
-        for i, (cat, cat_skills) in enumerate(categories):
-            skill_columns[i % 3].append({'category': cat, 'skills': cat_skills})
-
-        social_settings = SocialSettings.objects.first()
-        
-        context = {
-            'summary': summary,
-            'experiences': experiences,
-            'certifications': certifications,
-            'education_list': education_list,
-            'skill_columns': skill_columns,
-            'social_settings': social_settings,
-            'user': request.user,
-            'pdf_owner_name': settings.PDF_OWNER_NAME
-        }
-        
-        template_path = 'portfolio/cv_pdf.html'
-        template = get_template(template_path)
-        html = template.render(context)
-
-        # Generate PDF using WeasyPrint
+        # Generate PDF using the reusable WeasyPrint service.
         try:
             response = HttpResponse(content_type='application/pdf')
             response['Content-Disposition'] = 'attachment; filename="cv.pdf"'
-            HTML(string=html).write_pdf(response)
+            pdf_bytes = generate_cv_pdf(context)
+            response.write(pdf_bytes)
         except Exception:
             return HttpResponse(
                 'We had some errors generating your PDF. Please try again later.',
