@@ -25,6 +25,7 @@ urlpatterns = [
     path('', include('apps.portfolio.urls', namespace='portfolio')),
     path('blog/', include('apps.blog.urls', namespace='blog')),
     path('api/v1/', include('apps.blog.api.urls', namespace='blog_api')),
+    path('api/v1/cv-assistant/', include('apps.cv_assistant.api.urls', namespace='cv_assistant_api')),
     # Health check endpoints (bypass ALLOWED_HOSTS via HealthCheckHostMiddleware)
     path('health', health.health),
     path('readiness', health.readiness),
