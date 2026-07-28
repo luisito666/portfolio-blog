@@ -280,8 +280,8 @@ class TestGeneratePDFView(TestCase):
         signer = TimestampSigner()
         token = signer.sign(secrets.token_hex(16))
 
-        with patch('apps.portfolio.views.HTML') as mock_html, \
-             patch('apps.portfolio.views.get_template') as mock_get_template:
+        with patch('apps.cv_assistant.services.pdf_generator.HTML') as mock_html, \
+             patch('apps.cv_assistant.services.pdf_generator.get_template') as mock_get_template:
             mock_template = MagicMock()
             mock_template.render.return_value = '<html><body>CV</body></html>'
             mock_get_template.return_value = mock_template
@@ -299,8 +299,8 @@ class TestGeneratePDFView(TestCase):
         signer = TimestampSigner()
         token = signer.sign(secrets.token_hex(16))
 
-        with patch('apps.portfolio.views.HTML') as mock_html, \
-             patch('apps.portfolio.views.get_template') as mock_get_template:
+        with patch('apps.cv_assistant.services.pdf_generator.HTML') as mock_html, \
+             patch('apps.cv_assistant.services.pdf_generator.get_template') as mock_get_template:
             mock_template = MagicMock()
             mock_template.render.return_value = '<html><body>CV</body></html>'
             mock_get_template.return_value = mock_template
