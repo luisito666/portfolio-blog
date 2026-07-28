@@ -10,14 +10,17 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.cv_assistant.models import JobApplication
+from apps.cv_assistant.models import CVVersion, JobApplication
 
 User = get_user_model()
 
 # Dotted path used to mock the AI client without making real API calls.
 AI_CLIENT_PATH = "apps.cv_assistant.api.views.chat_completion"
+# Dotted path for mocking the PDF generator.
+PDF_GEN_PATH = "apps.cv_assistant.api.views.pdf_generator.generate_cv_pdf"
 
 JOBS_URL = "/api/v1/cv-assistant/jobs/"
+CV_VERSIONS_URL = "/api/v1/cv-assistant/cv-versions/"
 TOKEN_URL = "/api/v1/cv-assistant/auth/login/"
 
 
@@ -205,9 +208,6 @@ class ChatEndpointsTest(APITestCase, _AuthMixin):
 # Task 10: Generate CV version endpoint
 # ---------------------------------------------------------------------------
 
-# Dotted paths for mocking services used by the generate-cv endpoint.
-PDF_GEN_PATH = "apps.cv_assistant.api.views.pdf_generator.generate_cv_pdf"
-
 # A valid AI JSON response referencing the experience created by _seed_portfolio
 # (id=1, since it's the first Experience row in the test DB).
 VALID_AI_RESPONSE = (
@@ -251,7 +251,6 @@ class GenerateCVTest(APITestCase, _AuthMixin):
         # PDF file field should be populated
         self.assertTrue(data["pdf_file"])
         # CVVersion created and PDF non-empty on disk
-        from apps.cv_assistant.models import CVVersion
         cv = CVVersion.objects.get(job_application=self.job, version_number=1)
         self.assertTrue(cv.pdf_file.name)
         cv.pdf_file.open("rb")
@@ -275,7 +274,75 @@ class GenerateCVTest(APITestCase, _AuthMixin):
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resp.json()["version_number"], 2)
-        from apps.cv_assistant.models import CVVersion
         self.assertEqual(
             CVVersion.objects.filter(job_application=self.job).count(), 2
         )
+
+
+# ---------------------------------------------------------------------------
+# Task 11: Regenerate CV PDF from saved version
+# ---------------------------------------------------------------------------
+
+class RegeneratePDFTest(APITestCase, _AuthMixin):
+    """Task 11: /api/v1/cv-assistant/cv-versions/<pk>/regenerate-pdf/ endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff = User.objects.create_user(
+            username="staff", password="pw12345!", is_staff=True
+        )
+
+    def setUp(self):
+        self.client.credentials(HTTP_AUTHORIZATION=None)
+        self._jwt_auth(self.client, "staff", "pw12345!")
+        _seed_portfolio()
+        self.job = JobApplication.objects.create(
+            company="OpenAI",
+            position="Backend Engineer",
+            job_description="We need a Django dev with REST experience.",
+        )
+        # Create a CVVersion with adapted data (no PDF yet).
+        self.cv_version = self.job.cv_versions.create(
+            version_number=1,
+            adapted_summary="A saved adapted summary.",
+            adapted_experiences=[
+                {"id": 1, "description_adapted": "Saved adapted description."},
+            ],
+            ai_model="gpt-4o-mini",
+            prompt_summary="initial",
+        )
+
+    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 regenerated pdf content")
+    def test_regenerate_pdf_creates_file(self, _mock_pdf):
+        """Regenerate when no PDF exists yet — file should be created."""
+        self.assertFalse(self.cv_version.pdf_file.name)
+        resp = self.client.post(
+            f"{CV_VERSIONS_URL}{self.cv_version.pk}/regenerate-pdf/",
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.cv_version.refresh_from_db()
+        self.assertTrue(self.cv_version.pdf_file.name)
+        # Content should be the mocked bytes
+        self.cv_version.pdf_file.open("rb")
+        content = self.cv_version.pdf_file.read()
+        self.cv_version.pdf_file.close()
+        self.assertIn(b"regenerated pdf content", content)
+
+    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 new content")
+    def test_regenerate_pdf_overwrites_existing(self, _mock_pdf):
+        """Regenerate when a PDF already exists — file should be overwritten."""
+        # First regeneration to create the file.
+        self.client.post(
+            f"{CV_VERSIONS_URL}{self.cv_version.pk}/regenerate-pdf/", format="json"
+        )
+        # Second regeneration should overwrite with new content.
+        resp = self.client.post(
+            f"{CV_VERSIONS_URL}{self.cv_version.pk}/regenerate-pdf/", format="json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.cv_version.refresh_from_db()
+        self.cv_version.pdf_file.open("rb")
+        content = self.cv_version.pdf_file.read()
+        self.cv_version.pdf_file.close()
+        self.assertIn(b"new content", content)

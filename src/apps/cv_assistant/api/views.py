@@ -157,3 +157,45 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         # 8. Return the serialized CV version.
         serializer = CVVersionSerializer(cv_version)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CVVersionViewSet(viewsets.ModelViewSet):
+    """CRUD + regenerate endpoints for CVVersion records (staff only)."""
+
+    queryset = CVVersion.objects.all()
+    serializer_class = CVVersionSerializer
+    permission_classes = [IsAdminUser]
+
+    # ------------------------------------------------------------------
+    # Task 11: Regenerate the PDF from the saved adapted data.
+    # ------------------------------------------------------------------
+    @action(detail=True, methods=["post"], url_path="regenerate-pdf")
+    def regenerate_pdf(self, request, pk=None):
+        """Re-render the PDF for this CV version from its stored adapted data.
+
+        Useful when the PDF template changes or the original file was lost.
+        Overwrites the existing ``pdf_file``.
+        """
+        cv_version = self.get_object()
+
+        # 1. Rebuild the adapted context from the stored fields.
+        adapted_data = {
+            "summary": cv_version.adapted_summary or "",
+            "experiences": cv_version.adapted_experiences or [],
+        }
+        context = cv_builder.build_cv_context(adapted_data=adapted_data)
+
+        # 2. Generate the PDF bytes.
+        pdf_bytes = pdf_generator.generate_cv_pdf(context)
+
+        # 3. Overwrite the existing file (or create a new one).
+        existing_name = cv_version.pdf_file.name if cv_version.pdf_file else None
+        pdf_name = (
+            existing_name.split("/")[-1] if existing_name
+            else f"cv_v{cv_version.version_number}_regenerated.pdf"
+        )
+        cv_version.pdf_file.save(pdf_name, ContentFile(pdf_bytes), save=True)
+
+        # 4. Return the updated CV version.
+        serializer = CVVersionSerializer(cv_version)
+        return Response(serializer.data, status=status.HTTP_200_OK)
