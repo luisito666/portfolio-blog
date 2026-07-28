@@ -6,11 +6,16 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from .views import CVVersionViewSet, JobApplicationViewSet
+from .views import (
+    CVVersionViewSet,
+    JobApplicationViewSet,
+    RecruiterResponseViewSet,
+)
 
 router = DefaultRouter()
 router.register(r"jobs", JobApplicationViewSet, basename="job")
 router.register(r"cv-versions", CVVersionViewSet, basename="cv-version")
+router.register(r"recruiter-responses", RecruiterResponseViewSet, basename="recruiter-response")
 
 app_name = "cv_assistant_api"
 

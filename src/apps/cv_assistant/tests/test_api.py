@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.cv_assistant.models import CVVersion, JobApplication
+from apps.cv_assistant.models import CVVersion, JobApplication, RecruiterResponse
 
 User = get_user_model()
 
@@ -21,6 +21,7 @@ PDF_GEN_PATH = "apps.cv_assistant.api.views.pdf_generator.generate_cv_pdf"
 
 JOBS_URL = "/api/v1/cv-assistant/jobs/"
 CV_VERSIONS_URL = "/api/v1/cv-assistant/cv-versions/"
+RECRUITER_RESPONSES_URL = "/api/v1/cv-assistant/recruiter-responses/"
 TOKEN_URL = "/api/v1/cv-assistant/auth/login/"
 
 
@@ -346,3 +347,67 @@ class RegeneratePDFTest(APITestCase, _AuthMixin):
         content = self.cv_version.pdf_file.read()
         self.cv_version.pdf_file.close()
         self.assertIn(b"new content", content)
+
+
+# ---------------------------------------------------------------------------
+# Task 12: RecruiterResponse endpoints
+# ---------------------------------------------------------------------------
+
+class RecruiterResponseTest(APITestCase, _AuthMixin):
+    """Task 12: /api/v1/cv-assistant/recruiter-responses/ CRUD + status update."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff = User.objects.create_user(
+            username="staff", password="pw12345!", is_staff=True
+        )
+
+    def setUp(self):
+        self.client.credentials(HTTP_AUTHORIZATION=None)
+        self._jwt_auth(self.client, "staff", "pw12345!")
+        _seed_portfolio()
+        self.job = JobApplication.objects.create(
+            company="OpenAI",
+            position="Backend Engineer",
+            job_description="We need a Django dev with REST experience.",
+        )
+        self.cv_version = self.job.cv_versions.create(
+            version_number=1,
+            adapted_summary="Adapted summary.",
+            adapted_experiences=[],
+            ai_model="gpt-4o-mini",
+            prompt_summary="",
+        )
+
+    def test_create_recruiter_response_updates_job_status(self):
+        """Creating a recruiter response marks the parent job as 'responded'."""
+        resp = self.client.post(
+            RECRUITER_RESPONSES_URL,
+            {
+                "cv_version": self.cv_version.pk,
+                "response_type": "interview",
+                "notes": "Great CV! Let's talk.",
+            },
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        data = resp.json()
+        self.assertEqual(data["response_type"], "interview")
+        self.assertEqual(data["cv_version"], self.cv_version.pk)
+        # Job application status should be updated to 'responded'
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, "responded")
+        # RecruiterResponse record created
+        self.assertEqual(RecruiterResponse.objects.count(), 1)
+
+    def test_list_recruiter_responses(self):
+        RecruiterResponse.objects.create(
+            cv_version=self.cv_version,
+            response_type="interview",
+            notes="Called back",
+        )
+        resp = self.client.get(RECRUITER_RESPONSES_URL)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        results = resp.json().get("results", resp.json())
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["response_type"], "interview")

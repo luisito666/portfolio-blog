@@ -7,7 +7,12 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.cv_assistant.models import ChatMessage, CVVersion, JobApplication
+from apps.cv_assistant.models import (
+    ChatMessage,
+    CVVersion,
+    JobApplication,
+    RecruiterResponse,
+)
 from apps.cv_assistant.services import cv_adapter, cv_builder, pdf_generator
 from apps.cv_assistant.services.ai_client import chat_completion
 
@@ -16,6 +21,7 @@ from .serializers import (
     ChatMessageSerializer,
     CVVersionSerializer,
     JobApplicationSerializer,
+    RecruiterResponseSerializer,
 )
 
 
@@ -158,6 +164,53 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         serializer = CVVersionSerializer(cv_version)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    # ------------------------------------------------------------------
+    # Task 13: Dashboard endpoint — CV success metrics.
+    # ------------------------------------------------------------------
+    @action(detail=False, methods=["get"], url_path="dashboard")
+    def dashboard(self, request, pk=None):
+        """Return aggregate CV success metrics for the dashboard."""
+        from django.db.models import Count
+
+        # Totals
+        total_applications = JobApplication.objects.count()
+        total_cv_versions = CVVersion.objects.count()
+
+        # Status breakdown: {status_value: count}
+        status_breakdown = {}
+        status_counts = (
+            JobApplication.objects.values("status")
+            .annotate(count=Count("id"))
+            .order_by("status")
+        )
+        for entry in status_counts:
+            status_breakdown[entry["status"]] = entry["count"]
+
+        # Response breakdown: {response_type: count}
+        response_breakdown = {}
+        response_counts = (
+            RecruiterResponse.objects.values("response_type")
+            .annotate(count=Count("id"))
+            .order_by("response_type")
+        )
+        for entry in response_counts:
+            response_breakdown[entry["response_type"]] = entry["count"]
+
+        # Recent applications (5 most recent)
+        recent_qs = JobApplication.objects.order_by("-created_at")[:5]
+        recent_serializer = JobApplicationSerializer(recent_qs, many=True)
+
+        return Response(
+            {
+                "total_applications": total_applications,
+                "total_cv_versions": total_cv_versions,
+                "status_breakdown": status_breakdown,
+                "response_breakdown": response_breakdown,
+                "recent_applications": recent_serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
 
 class CVVersionViewSet(viewsets.ModelViewSet):
     """CRUD + regenerate endpoints for CVVersion records (staff only)."""
@@ -199,3 +252,23 @@ class CVVersionViewSet(viewsets.ModelViewSet):
         # 4. Return the updated CV version.
         serializer = CVVersionSerializer(cv_version)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RecruiterResponseViewSet(viewsets.ModelViewSet):
+    """CRUD endpoints for RecruiterResponse records (staff only)."""
+
+    queryset = RecruiterResponse.objects.all()
+    serializer_class = RecruiterResponseSerializer
+    permission_classes = [IsAdminUser]
+
+    # ------------------------------------------------------------------
+    # Task 12: Update parent JobApplication status on response creation.
+    # ------------------------------------------------------------------
+    def perform_create(self, serializer):
+        """Save the recruiter response, then mark the parent job application
+        as 'responded'.
+        """
+        recruiter_response = serializer.save()
+        job_application = recruiter_response.cv_version.job_application
+        job_application.status = "responded"
+        job_application.save()
