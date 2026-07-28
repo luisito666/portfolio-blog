@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # Local apps
     'apps.portfolio',
     'apps.blog',
+    'apps.cv_assistant',
     'rest_framework',
     'rest_framework_simplejwt',
 ]
