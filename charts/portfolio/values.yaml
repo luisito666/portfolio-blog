@@ -241,3 +241,10 @@ configmap:
   # values-prod.yaml) rather than changing this default.
   DEBUG: "0"
   PDF_OWNER_NAME: Luis Albero Penagos
+  # AI/OpenAI-compatible settings (CV Assistant feature).
+  # Set AI_API_KEY via the sensitive-data secret, NOT here.
+  # base_url: OpenAI API or any compatible provider (ZAI/GLM, DeepSeek, etc.)
+  AI_BASE_URL: https://api.openai.com/v1
+  AI_MODEL: gpt-4o-mini
+  AI_TEMPERATURE: "0.7"
+  AI_MAX_TOKENS: "4000"
