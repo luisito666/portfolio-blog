@@ -199,3 +199,83 @@ class ChatEndpointsTest(APITestCase, _AuthMixin):
             f"{JOBS_URL}{self.job.pk}/messages/", {}, format="json"
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+# ---------------------------------------------------------------------------
+# Task 10: Generate CV version endpoint
+# ---------------------------------------------------------------------------
+
+# Dotted paths for mocking services used by the generate-cv endpoint.
+PDF_GEN_PATH = "apps.cv_assistant.api.views.pdf_generator.generate_cv_pdf"
+
+# A valid AI JSON response referencing the experience created by _seed_portfolio
+# (id=1, since it's the first Experience row in the test DB).
+VALID_AI_RESPONSE = (
+    '{"summary": "Adapted summary for the role.", '
+    '"experiences": [{"id": 1, "description_adapted": "Adapted description."}]}'
+)
+
+
+class GenerateCVTest(APITestCase, _AuthMixin):
+    """Task 10: /api/v1/cv-assistant/jobs/<pk>/generate-cv/ endpoint."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff = User.objects.create_user(
+            username="staff", password="pw12345!", is_staff=True
+        )
+
+    def setUp(self):
+        self.client.credentials(HTTP_AUTHORIZATION=None)
+        self._jwt_auth(self.client, "staff", "pw12345!")
+        _seed_portfolio()
+        self.job = JobApplication.objects.create(
+            company="OpenAI",
+            position="Backend Engineer",
+            job_description="We need a Django dev with REST experience.",
+        )
+
+    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_PATH, return_value=VALID_AI_RESPONSE)
+    def test_generate_cv_creates_version_1(self, _mock_ai, _mock_pdf):
+        resp = self.client.post(
+            f"{JOBS_URL}{self.job.pk}/generate-cv/",
+            {"user_instructions": "Emphasize REST."},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        data = resp.json()
+        self.assertEqual(data["version_number"], 1)
+        self.assertEqual(data["adapted_summary"], "Adapted summary for the role.")
+        self.assertEqual(data["ai_model"], "gpt-4o-mini")
+        # PDF file field should be populated
+        self.assertTrue(data["pdf_file"])
+        # CVVersion created and PDF non-empty on disk
+        from apps.cv_assistant.models import CVVersion
+        cv = CVVersion.objects.get(job_application=self.job, version_number=1)
+        self.assertTrue(cv.pdf_file.name)
+        cv.pdf_file.open("rb")
+        content = cv.pdf_file.read()
+        cv.pdf_file.close()
+        self.assertTrue(len(content) > 0)
+        # Job status updated
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, "cv_generated")
+
+    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_PATH, return_value=VALID_AI_RESPONSE)
+    def test_generate_cv_second_call_creates_version_2(self, _mock_ai, _mock_pdf):
+        # First call -> version 1
+        self.client.post(
+            f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
+        )
+        # Second call -> version 2
+        resp = self.client.post(
+            f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.json()["version_number"], 2)
+        from apps.cv_assistant.models import CVVersion
+        self.assertEqual(
+            CVVersion.objects.filter(job_application=self.job).count(), 2
+        )
