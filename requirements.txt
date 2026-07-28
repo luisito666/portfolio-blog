@@ -12,3 +12,4 @@ pydyf==0.11.0
 requests==2.31.0
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
+openai==1.51.0

@@ -187,3 +187,10 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# AI/OpenAI-compatible settings
+AI_API_KEY = config('AI_API_KEY', default='')
+AI_BASE_URL = config('AI_BASE_URL', default='https://api.openai.com/v1')
+AI_MODEL = config('AI_MODEL', default='gpt-4o-mini')
+AI_TEMPERATURE = config('AI_TEMPERATURE', default=0.7, cast=float)
+AI_MAX_TOKENS = config('AI_MAX_TOKENS', default=4000, cast=int)
