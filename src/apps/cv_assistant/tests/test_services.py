@@ -23,7 +23,7 @@ from apps.cv_assistant.services import ai_client, cv_adapter, cv_builder, pdf_ge
 
 
 def _make_summary():
-    return Summary.objects.create(title='Summary', content='** Experienced ** dev')
+    return Summary.objects.create(title='Summary', content='**Experienced** dev')
 
 
 def _make_experience():
