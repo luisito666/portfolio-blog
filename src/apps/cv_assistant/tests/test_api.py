@@ -204,6 +204,18 @@ class ChatEndpointsTest(APITestCase, _AuthMixin):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @patch(AI_CLIENT_PATH, side_effect=Exception("AI service down"))
+    def test_post_message_ai_failure_returns_503(self, _mock):
+        resp = self.client.post(
+            f"{JOBS_URL}{self.job.pk}/messages/",
+            {"content": "Hello"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        # User message saved, no assistant message
+        self.assertEqual(self.job.messages.filter(role="user").count(), 1)
+        self.assertEqual(self.job.messages.filter(role="assistant").count(), 0)
+
 
 # ---------------------------------------------------------------------------
 # Task 10: Generate CV version endpoint
@@ -278,6 +290,19 @@ class GenerateCVTest(APITestCase, _AuthMixin):
         self.assertEqual(
             CVVersion.objects.filter(job_application=self.job).count(), 2
         )
+
+    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake")
+    @patch(AI_CLIENT_PATH, side_effect=Exception("AI service down"))
+    def test_generate_cv_ai_failure_returns_503(self, _mock_ai, _mock_pdf):
+        resp = self.client.post(f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json")
+        self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(CVVersion.objects.filter(job_application=self.job).count(), 0)
+
+    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake")
+    @patch(AI_CLIENT_PATH, return_value="not valid json at all")
+    def test_generate_cv_parse_failure_returns_422(self, _mock_ai, _mock_pdf):
+        resp = self.client.post(f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json")
+        self.assertEqual(resp.status_code, 422)
 
 
 # ---------------------------------------------------------------------------
@@ -411,3 +436,43 @@ class RecruiterResponseTest(APITestCase, _AuthMixin):
         results = resp.json().get("results", resp.json())
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["response_type"], "interview")
+
+
+# ---------------------------------------------------------------------------
+# Bug 3: Query filtering on CVVersionViewSet
+# ---------------------------------------------------------------------------
+
+class CVVersionFilterTest(APITestCase, _AuthMixin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff = User.objects.create_user(
+            username="staff", password="pw12345!", is_staff=True
+        )
+
+    def setUp(self):
+        self.client.credentials(HTTP_AUTHORIZATION=None)
+        self._jwt_auth(self.client, "staff", "pw12345!")
+        _seed_portfolio()
+        self.job1 = JobApplication.objects.create(
+            company="Corp A", position="Dev",
+            job_description="Description A",
+        )
+        self.job2 = JobApplication.objects.create(
+            company="Corp B", position="Dev",
+            job_description="Description B",
+        )
+        self.cv1 = self.job1.cv_versions.create(
+            version_number=1, adapted_summary="S1",
+            adapted_experiences=[], ai_model="test",
+        )
+        self.cv2 = self.job2.cv_versions.create(
+            version_number=1, adapted_summary="S2",
+            adapted_experiences=[], ai_model="test",
+        )
+
+    def test_filter_cv_versions_by_job(self):
+        resp = self.client.get(f"{CV_VERSIONS_URL}?job={self.job1.pk}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        results = resp.json().get("results", resp.json())
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["adapted_summary"], "S1")

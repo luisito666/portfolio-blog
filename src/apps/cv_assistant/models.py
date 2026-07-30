@@ -80,6 +80,7 @@ class CVVersion(models.Model):
         ordering = ['-version_number']
         verbose_name = "CV Version"
         verbose_name_plural = "CV Versions"
+        unique_together = [('job_application', 'version_number')]
 
     def __str__(self):
         return f"CV v{self.version_number} for {self.job_application}"

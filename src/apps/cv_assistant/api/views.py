@@ -1,6 +1,7 @@
 """DRF views for the cv_assistant app."""
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.db.models import Max
 
 from rest_framework import status, viewsets
@@ -65,30 +66,33 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         )
 
         # 2. Build the conversation context for the AI.
+        # ALWAYS include the system prompt (CV data + rules)
+        base_cv_data = cv_builder.build_cv_context()
+        system_prompt = cv_adapter.build_system_prompt(base_cv_data)
+        conversation = [{"role": "system", "content": system_prompt}]
+
+        # ALWAYS include the adaptation prompt (job description context)
+        adaptation_prompt = cv_adapter.build_adaptation_prompt(
+            job_application.job_description
+        )
+        conversation.append({"role": "user", "content": adaptation_prompt})
+
+        # Add prior messages from DB (excluding the just-created user message)
         prior = messages_qs.exclude(pk=user_message.pk).values("role", "content")
-        conversation = [{"role": m["role"], "content": m["content"]} for m in prior]
+        for m in prior:
+            conversation.append({"role": m["role"], "content": m["content"]})
 
-        is_first = len(conversation) == 0
-        if is_first:
-            base_cv_data = cv_builder.build_cv_context()
-            system_prompt = cv_adapter.build_system_prompt(base_cv_data)
-            adaptation_prompt = cv_adapter.build_adaptation_prompt(
-                job_application.job_description
-            )
-            conversation = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": adaptation_prompt},
-            ]
-
-        # Append the new user message, UNLESS it is the first message (in which
-        # case the adaptation prompt already represents it).
-        if not is_first:
-            conversation.append(
-                {"role": ChatMessage.ROLE_USER, "content": user_message.content}
-            )
+        # ALWAYS add the new user message (never discard it)
+        conversation.append({"role": "user", "content": user_message.content})
 
         # 3. Call the AI client.
-        ai_response = chat_completion(conversation)
+        try:
+            ai_response = chat_completion(conversation)
+        except Exception:
+            return Response(
+                {"detail": "AI service temporarily unavailable. Please try again."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         # 4. Persist the assistant reply.
         assistant_message = job_application.messages.create(
@@ -128,23 +132,37 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         ]
 
         # 3. Call the AI and parse the structured response.
-        ai_response = chat_completion(messages)
-        parsed = cv_adapter.parse_ai_response(ai_response)
+        try:
+            ai_response = chat_completion(messages)
+        except Exception:
+            return Response(
+                {"detail": "AI service temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
-        # 4. Determine the next version_number.
-        existing_max = job_application.cv_versions.aggregate(
-            _max_version=Max("version_number"),
-        )["_max_version"]
-        next_version = (existing_max or 0) + 1
+        try:
+            parsed = cv_adapter.parse_ai_response(ai_response)
+        except ValueError as e:
+            return Response(
+                {"detail": f"AI response was not valid: {e}"},
+                status=422,
+            )
 
-        # 5. Create the CVVersion record.
-        cv_version = job_application.cv_versions.create(
-            version_number=next_version,
-            adapted_summary=parsed["summary"],
-            adapted_experiences=parsed["experiences"],
-            ai_model=settings.AI_MODEL,
-            prompt_summary=request.data.get("prompt_summary", ""),
-        )
+        # 4-5. Determine version_number and create CVVersion atomically.
+        with transaction.atomic():
+            existing_versions = job_application.cv_versions.select_for_update()
+            existing_max = existing_versions.aggregate(
+                _max_version=Max("version_number"),
+            )["_max_version"]
+            next_version = (existing_max or 0) + 1
+
+            cv_version = job_application.cv_versions.create(
+                version_number=next_version,
+                adapted_summary=parsed["summary"],
+                adapted_experiences=parsed["experiences"],
+                ai_model=settings.AI_MODEL,
+                prompt_summary=request.data.get("prompt_summary", ""),
+            )
 
         # 6. Build the adapted context and generate the PDF.
         adapted_data = {
@@ -219,6 +237,13 @@ class CVVersionViewSet(viewsets.ModelViewSet):
     serializer_class = CVVersionSerializer
     permission_classes = [IsAdminUser]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        job_id = self.request.query_params.get("job")
+        if job_id:
+            queryset = queryset.filter(job_application_id=job_id)
+        return queryset
+
     # ------------------------------------------------------------------
     # Task 11: Regenerate the PDF from the saved adapted data.
     # ------------------------------------------------------------------
@@ -260,6 +285,13 @@ class RecruiterResponseViewSet(viewsets.ModelViewSet):
     queryset = RecruiterResponse.objects.all()
     serializer_class = RecruiterResponseSerializer
     permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        job_id = self.request.query_params.get("job")
+        if job_id:
+            queryset = queryset.filter(cv_version__job_application_id=job_id)
+        return queryset
 
     # ------------------------------------------------------------------
     # Task 12: Update parent JobApplication status on response creation.

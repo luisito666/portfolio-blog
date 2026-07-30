@@ -225,19 +225,10 @@
         apiCall('POST', 'jobs/' + state.selectedJobId + '/messages/', { content: content })
             .then(function (resp) {
                 if (loading.parentNode) loading.parentNode.removeChild(loading);
-                if (resp) {
-                    // Append assistant reply if returned
-                    if (resp.role === 'assistant' || resp.content) {
-                        area.appendChild(renderMessage(resp));
-                    }
-                    // If backend returns both messages via refresh
-                    if (resp.user_message || resp.assistant_message) {
-                        if (resp.user_message) area.appendChild(renderMessage(resp.user_message));
-                        if (resp.assistant_message) area.appendChild(renderMessage(resp.assistant_message));
-                    }
-                } else {
-                    // No body — reload messages to ensure sync
-                    loadMessages(state.selectedJobId);
+                if (Array.isArray(resp) && resp.length > 0) {
+                    // resp is [user_message, assistant_message]
+                    // Replace optimistic with the real assistant reply
+                    area.appendChild(renderMessage(resp[resp.length - 1]));
                 }
                 area.scrollTop = area.scrollHeight;
             })
@@ -305,6 +296,7 @@
             var results = data.results || data || [];
             state.cvVersions = results;
             renderCVVersions();
+            populateRecruiterCVVersionSelect();
         }).catch(function (err) {
             console.error(err);
             $('cv-versions-list').innerHTML = '<li class="panel-empty">Failed to load CV versions.</li>';
@@ -319,12 +311,27 @@
         }
         list.innerHTML = state.cvVersions.map(function (v) {
             var pdf = v.pdf_file || v.pdf_url || '';
+            if (pdf && pdf.indexOf('http') !== 0 && pdf.indexOf('/') !== 0) {
+                pdf = '/' + pdf;
+            }
             var link = pdf ? '<a href="' + escapeHtml(pdf) + '" target="_blank" class="cv-version-link"><i class="fas fa-file-pdf"></i> Download PDF</a>' : '';
             return '<li class="cv-version-item">' + link +
                 '<span class="cv-version-meta">v' + escapeHtml(String(v.version_number || v.id)) +
                 (v.created_at ? ' · ' + new Date(v.created_at).toLocaleDateString() : '') +
                 '</span></li>';
         }).join('');
+    }
+
+    function populateRecruiterCVVersionSelect() {
+        var select = $('recruiter-cv-version');
+        if (!select) return;
+        select.innerHTML = '<option value="">Select CV version...</option>';
+        state.cvVersions.forEach(function (v) {
+            var opt = document.createElement('option');
+            opt.value = v.id;
+            opt.textContent = 'v' + v.version_number;
+            select.appendChild(opt);
+        });
     }
 
     // ---- Recruiter responses ----
@@ -346,26 +353,25 @@
             return;
         }
         list.innerHTML = state.recruiterResponses.map(function (r) {
-            return '<li><strong>' + escapeHtml(r.subject || '(no subject)') + '</strong>' +
-                '<br>' + escapeHtml(r.content || '') + '</li>';
+            return '<li><strong>' + escapeHtml(r.response_type || 'unknown') + '</strong>' +
+                '<br>' + escapeHtml(r.notes || '') + '</li>';
         }).join('');
     }
 
     function submitRecruiterResponse(e) {
         e.preventDefault();
-        if (!state.selectedJobId) return;
-        var subject = $('recruiter-subject').value.trim();
-        var content = $('recruiter-content').value.trim();
-        if (!subject && !content) return;
-        apiCall('POST', 'recruiter-responses/', { job: state.selectedJobId, subject: subject, content: content })
-            .then(function (resp) {
-                $('recruiter-subject').value = '';
-                $('recruiter-content').value = '';
-                loadRecruiterResponses(state.selectedJobId);
-            })
-            .catch(function (err) {
-                showError(err.data ? JSON.stringify(err.data) : err.message);
-            });
+        var cvVersionId = $('recruiter-cv-version').value;
+        if (!cvVersionId) return;
+        apiCall('POST', 'recruiter-responses/', {
+            cv_version: parseInt(cvVersionId, 10),
+            response_type: $('recruiter-response-type').value,
+            notes: $('recruiter-notes').value.trim(),
+        }).then(function () {
+            $('recruiter-notes').value = '';
+            loadRecruiterResponses(state.selectedJobId);
+        }).catch(function (err) {
+            showError(err.data ? JSON.stringify(err.data) : err.message);
+        });
     }
 
     // ---- New application ----
@@ -377,9 +383,7 @@
         var payload = {
             company: $('company').value.trim(),
             position: $('position').value.trim(),
-            job_description: $('job_description').value.trim(),
-            job_url: $('job_url').value.trim(),
-            status: $('status').value
+            job_description: $('job-description').value.trim(),
         };
         if (!payload.company || !payload.position) return;
         apiCall('POST', 'jobs/', payload)
@@ -411,8 +415,8 @@
         // Pre-fetch CSRF token (meta tag already set in template)
         getCSRFToken();
 
-        $('new-application-btn').addEventListener('click', showNewJobModal);
-        $('close-modal-btn').addEventListener('click', hideNewJobModal);
+        $('new-job-btn').addEventListener('click', showNewJobModal);
+        $('modal-cancel-btn').addEventListener('click', hideNewJobModal);
         $('new-job-form').addEventListener('submit', createNewJob);
         $('new-job-modal').addEventListener('click', function (e) {
             if (e.target === this) hideNewJobModal();
