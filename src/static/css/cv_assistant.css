@@ -40,8 +40,15 @@ html.dark {
     overflow: hidden;
 }
 
-.chat-sidebar .btn-block {
+.sidebar-title {
     margin: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    font-size: 1.1rem;
+    color: var(--heading-color);
+}
+
+.chat-sidebar .btn-block {
+    margin: 0 var(--spacing-md) var(--spacing-md);
     width: calc(100% - 2 * var(--spacing-md));
 }
 
@@ -482,6 +489,13 @@ html.dark {
     padding: var(--spacing-lg);
     max-height: 70vh;
     overflow-y: auto;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
 }
 
 /* ===== Loading indicator ===== */
