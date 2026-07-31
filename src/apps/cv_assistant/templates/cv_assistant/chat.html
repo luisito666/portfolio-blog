@@ -4,75 +4,76 @@
 {% block title %}AI CV Assistant{% endblock %}
 
 {% block content %}
-<div class="cv-assistant-container">
+<div class="cv-assistant-page">
+<div class="chat-app">
     <!-- Left sidebar: job applications list -->
-    <aside class="cv-assistant-sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2>AI Assistant</h2>
-            <button class="btn btn-primary btn-sm" id="new-job-btn" title="New Application">
-                <i class="fas fa-plus"></i> New
-            </button>
-        </div>
-        <input type="text" id="job-search" placeholder="Search applications…" class="form-input">
-        <div class="job-list" id="jobs-list">
-            <p class="placeholder">Loading applications…</p>
-        </div>
+    <aside class="chat-sidebar" id="sidebar">
+        <h2 class="sidebar-title">AI Assistant</h2>
+        <button class="btn btn-primary btn-block" id="new-job-btn" title="New Application">
+            <i class="fas fa-plus"></i> New Application
+        </button>
+        <input type="text" id="job-search" class="job-search" placeholder="Search applications…">
+        <ul class="jobs-list" id="jobs-list">
+            <li class="jobs-empty">Loading applications…</li>
+        </ul>
     </aside>
 
     <!-- Main chat area -->
-    <main class="cv-assistant-main" id="main-area">
-        <!-- Job detail + chat -->
-        <div class="job-detail" id="job-detail">
-            <div class="job-header">
-                <div class="job-info">
-                    <h3 id="selected-job-title">—</h3>
-                    <span class="status-badge" id="selected-job-status">draft</span>
-                </div>
-                <div class="job-actions">
-                    <button class="btn btn-primary btn-sm" id="generate-cv-btn" title="Generate adapted CV" disabled>
-                        <i class="fas fa-file-pdf"></i> Generate CV
-                    </button>
-                    <button class="btn btn-secondary btn-sm" id="mark-sent-btn" title="Mark as sent" disabled>
-                        <i class="fas fa-paper-plane"></i> Mark Sent
-                    </button>
-                    <button class="btn btn-secondary btn-sm" id="toggle-panel-btn" title="CV Versions">
-                        <i class="fas fa-history"></i> Versions
-                    </button>
-                </div>
+    <main class="chat-main" id="main-area">
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <h2 id="selected-job-title">Select a job application</h2>
+                <span class="status-badge s-draft" id="selected-job-status">draft</span>
             </div>
-
-            <!-- Chat messages -->
-            <div class="chat-messages" id="messages-area">
-                <p class="placeholder">Select a job application to start chatting.</p>
-            </div>
-
-            <!-- Message input -->
-            <div class="chat-input">
-                <textarea id="message-input" placeholder="Type a message…" rows="2" disabled></textarea>
-                <button class="btn btn-primary" id="send-btn" disabled>
-                    <i class="fas fa-paper-plane"></i> Send
+            <div class="chat-header-actions">
+                <button class="btn btn-primary btn-sm" id="generate-cv-btn" title="Generate adapted CV" disabled>
+                    <i class="fas fa-file-alt"></i> Generate CV
+                </button>
+                <button class="btn btn-secondary btn-sm" id="mark-sent-btn" title="Mark as sent" disabled>
+                    <i class="fas fa-paper-plane"></i> Mark Sent
+                </button>
+                <button class="btn btn-secondary btn-sm" id="toggle-panel-btn" title="CV Versions">
+                    <i class="fas fa-history"></i> Versions
                 </button>
             </div>
+        </div>
+
+        <!-- Chat messages -->
+        <div class="chat-messages" id="messages-area">
+            <div class="chat-empty-state">
+                <i class="fas fa-comments"></i>
+                <p>Select a job application to start chatting.</p>
+            </div>
+        </div>
+
+        <!-- Message input -->
+        <div class="chat-input-area">
+            <textarea id="message-input" placeholder="Type a message…" rows="2" disabled></textarea>
+            <button class="btn btn-primary" id="send-btn" disabled>
+                <i class="fas fa-paper-plane"></i> Send
+            </button>
         </div>
     </main>
 
     <!-- Right panel: CV versions + recruiter responses -->
-    <aside class="cv-assistant-versions cv-panel-hidden" id="cv-panel">
-        <div class="versions-header">
+    <aside class="chat-panel cv-panel-hidden" id="cv-panel">
+        <div class="panel-header">
             <h3>CV Versions</h3>
-            <button class="btn btn-secondary btn-sm" id="close-panel-btn">
+            <button class="btn-icon" id="close-panel-btn" title="Close">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div class="versions-list" id="cv-versions-list"></div>
+        <div class="panel-content">
+            <ul id="cv-versions-list">
+                <li class="panel-empty">No CV versions yet.</li>
+            </ul>
 
-        <div class="versions-header">
-            <h3>Recruiter Responses</h3>
-        </div>
-        <div class="versions-list" id="recruiter-responses-list"></div>
+            <h4 class="panel-section-title">Recruiter Responses</h4>
+            <ul id="recruiter-responses-list">
+                <li class="panel-empty">Nothing yet.</li>
+            </ul>
 
-        <div class="recruiter-form-section">
-            <h4>Log Recruiter Response</h4>
+            <h4 class="panel-section-title">Log Recruiter Response</h4>
             <form id="recruiter-form" style="display:none;">
                 <select id="recruiter-cv-version" class="form-input" required>
                     <option value="">Select CV version...</option>
@@ -84,27 +85,30 @@
                     <option value="no_response">No Response</option>
                     <option value="other">Other</option>
                 </select>
-                <textarea id="recruiter-notes" placeholder="Notes..." class="form-input" rows="2"></textarea>
-                <button type="submit" class="btn btn-secondary btn-sm">Add Response</button>
+                <textarea id="recruiter-notes" placeholder="Notes..." class="form-textarea" rows="2"></textarea>
+                <button type="submit" class="btn btn-secondary btn-sm btn-block">Add Response</button>
             </form>
         </div>
     </aside>
 </div>
+</div>
 
 <!-- New job modal -->
-<div class="modal-overlay" id="new-job-modal" style="display:none;">
+<div class="modal" id="new-job-modal" style="display:none;">
     <div class="modal-content">
-        <h3>New Job Application</h3>
-        <form id="new-job-form">
-            <label>Company</label>
+        <div class="modal-header">
+            <h3>New Job Application</h3>
+        </div>
+        <form id="new-job-form" class="modal-form">
+            <label class="form-label" for="company">Company</label>
             <input type="text" id="company" class="form-input">
-            <label>Position</label>
+            <label class="form-label" for="position">Position</label>
             <input type="text" id="position" class="form-input">
-            <label>Job Description</label>
-            <textarea id="job-description" class="form-input" rows="8"></textarea>
+            <label class="form-label" for="job-description">Job Description</label>
+            <textarea id="job-description" class="form-textarea" rows="8"></textarea>
             <div class="modal-actions">
-                <button type="submit" class="btn btn-primary" id="modal-create-btn">Create</button>
                 <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="modal-create-btn">Create</button>
             </div>
         </form>
     </div>

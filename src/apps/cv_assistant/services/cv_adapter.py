@@ -120,6 +120,34 @@ If in English, write in English.
 8. Return ONLY the JSON — no markdown, no code blocks, no commentary."""
 
 
+def build_chat_system_prompt(base_cv_data):
+    """Build the system prompt for free-form chat conversation.
+
+    Shares the same base CV context as build_system_prompt(), but without the
+    "respond with JSON only" instructions — those are only needed for the
+    generate-cv structured-output flow, not for conversational chat.
+
+    Args:
+        base_cv_data: Context dict from cv_builder.build_cv_context(), same as
+                      build_system_prompt().
+
+    Returns:
+        System prompt string for the LLM.
+    """
+    structured_prompt = build_system_prompt(base_cv_data)
+    base_cv_section, _, _rules = structured_prompt.partition("RULES:")
+
+    return f"""{base_cv_section}RULES:
+1. Keep the same CV structure — do not add or remove sections.
+2. Adapt language to match the job description keywords and requirements when asked to.
+3. DO NOT invent new experiences, companies, positions, or dates.
+4. DO NOT change company names, position titles, or dates.
+5. Answer the user's questions and discuss the CV/job adaptation conversationally, \
+in plain natural language (no JSON, no markdown code blocks).
+6. If the job description or the user writes in Spanish, respond in Spanish. \
+If in English, respond in English."""
+
+
 def build_adaptation_prompt(job_description, user_instructions=None):
     """Build the user message with the job description and optional guidance.
 

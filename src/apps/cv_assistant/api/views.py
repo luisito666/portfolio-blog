@@ -68,7 +68,7 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         # 2. Build the conversation context for the AI.
         # ALWAYS include the system prompt (CV data + rules)
         base_cv_data = cv_builder.build_cv_context()
-        system_prompt = cv_adapter.build_system_prompt(base_cv_data)
+        system_prompt = cv_adapter.build_chat_system_prompt(base_cv_data)
         conversation = [{"role": "system", "content": system_prompt}]
 
         # ALWAYS include the adaptation prompt (job description context)
@@ -134,9 +134,9 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         # 3. Call the AI and parse the structured response.
         try:
             ai_response = chat_completion(messages)
-        except Exception:
+        except Exception as e:
             return Response(
-                {"detail": "AI service temporarily unavailable."},
+                {"detail": f'AI service temporarily unavailable. {e.args[0]}'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
