@@ -579,6 +579,9 @@ html.dark {
     }
 
     .chat-input-area .btn {
+        /* global .btn { width: 100% } kicks in below 480px (see style.css);
+           override it here so the send button doesn't take over the row. */
+        width: auto;
         flex-shrink: 0;
         padding: var(--spacing-sm);
         font-size: 16px;
