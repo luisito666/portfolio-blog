@@ -238,6 +238,7 @@ html.dark {
 /* ===== Input area ===== */
 .chat-input-area {
     display: flex;
+    align-items: flex-end;
     gap: var(--spacing-sm);
     padding: var(--spacing-md);
     border-top: 1px solid var(--border-color);
@@ -562,5 +563,28 @@ html.dark {
     .chat-header-actions .btn {
         font-size: 0.8rem;
         padding: var(--spacing-xs) var(--spacing-sm);
+    }
+
+    .chat-input-area {
+        padding: var(--spacing-sm);
+    }
+
+    /* iOS Safari auto-zooms the page on focus when an input's font-size
+       is below 16px; keep it at 16px so focusing the textarea doesn't
+       trigger that zoom (which is what makes the textbox look tiny and
+       the send button look huge). */
+    .chat-input-area textarea {
+        font-size: 16px;
+        max-height: 100px;
+    }
+
+    .chat-input-area .btn {
+        flex-shrink: 0;
+        padding: var(--spacing-sm);
+        font-size: 16px;
+    }
+
+    .chat-input-area .btn-text {
+        display: none;
     }
 }
