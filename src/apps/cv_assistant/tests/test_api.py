@@ -298,6 +298,36 @@ class GenerateCVTest(APITestCase, _AuthMixin):
         self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(CVVersion.objects.filter(job_application=self.job).count(), 0)
 
+    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_PATH, return_value=VALID_AI_RESPONSE)
+    def test_generate_cv_includes_conversation_history(self, mock_ai, _mock_pdf):
+        """The chat history for this job must be sent to the AI as context."""
+        self.job.messages.create(role="user", content="Do I fit this role?")
+        self.job.messages.create(
+            role="assistant", content="Yes, but highlight observability."
+        )
+        resp = self.client.post(
+            f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        _, kwargs = mock_ai.call_args
+        adaptation_msg = kwargs["messages"][1]["content"] if "messages" in kwargs else mock_ai.call_args[0][0][1]["content"]
+        self.assertIn("CONVERSATION HISTORY", adaptation_msg)
+        self.assertIn("Do I fit this role?", adaptation_msg)
+        self.assertIn("highlight observability", adaptation_msg)
+
+    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_PATH, return_value=VALID_AI_RESPONSE)
+    def test_generate_cv_without_history_omits_block(self, mock_ai, _mock_pdf):
+        """No chat history -> no CONVERSATION HISTORY block in the prompt."""
+        resp = self.client.post(
+            f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        _, kwargs = mock_ai.call_args
+        adaptation_msg = kwargs["messages"][1]["content"] if "messages" in kwargs else mock_ai.call_args[0][0][1]["content"]
+        self.assertNotIn("CONVERSATION HISTORY", adaptation_msg)
+
     @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake")
     @patch(AI_CLIENT_PATH, return_value="not valid json at all")
     def test_generate_cv_parse_failure_returns_422(self, _mock_ai, _mock_pdf):

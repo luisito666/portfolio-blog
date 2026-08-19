@@ -206,6 +206,42 @@ class TestCvAdapter(TestCase):
         msg = cv_adapter.build_adaptation_prompt('React frontend role')
         self.assertIn('React frontend role', msg)
 
+    def test_build_adaptation_prompt_includes_conversation_history(self):
+        history = [
+            {'role': 'user', 'content': 'Do I fit this role?'},
+            {'role': 'assistant', 'content': 'Yes, but highlight observability.'},
+        ]
+        msg = cv_adapter.build_adaptation_prompt(
+            'SRE role', conversation_history=history
+        )
+        self.assertIn('SRE role', msg)
+        self.assertIn('CONVERSATION HISTORY', msg)
+        self.assertIn('User: Do I fit this role?', msg)
+        self.assertIn('Assistant: Yes, but highlight observability.', msg)
+
+    def test_build_adaptation_prompt_without_history(self):
+        msg = cv_adapter.build_adaptation_prompt('SRE role')
+        self.assertNotIn('CONVERSATION HISTORY', msg)
+
+    def test_build_chat_system_prompt_forbids_cv_dump(self):
+        ctx = cv_builder.build_cv_context()
+        prompt = cv_adapter.build_chat_system_prompt(
+            ctx, job_description='Senior SRE with observability focus'
+        )
+        # Chat prompt must include CV + JD as read-only context...
+        self.assertIn('Acme', prompt)
+        self.assertIn('Senior SRE with observability focus', prompt)
+        # ...and must explicitly forbid generating the full CV in chat.
+        self.assertIn('NEVER output a full adapted CV', prompt)
+        self.assertIn('Generate CV', prompt)
+        # It must NOT carry the JSON-only rules from the adaptation prompt.
+        self.assertNotIn('description_adapted', prompt)
+
+    def test_build_chat_system_prompt_without_job_description(self):
+        ctx = cv_builder.build_cv_context()
+        prompt = cv_adapter.build_chat_system_prompt(ctx)
+        self.assertIn('No job description provided.', prompt)
+
     def test_parse_ai_response_valid_json(self):
         payload = {
             'summary': 'Adapted summary',
