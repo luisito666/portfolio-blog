@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, DetailView
 from django.core.paginator import Paginator
 from .models import BlogPost
-import markdown
+from core.markdown import render_markdown
 
 class PostListView(ListView):
     """Blog post listing view"""
@@ -33,6 +33,6 @@ class PostDetailView(DetailView):
         
         # Convert markdown content to HTML
         post = context['post']
-        context['post_html'] = markdown.markdown(post.content, extensions=['extra', 'codehilite'])
+        context['post_html'] = render_markdown(post.content)
         
         return context

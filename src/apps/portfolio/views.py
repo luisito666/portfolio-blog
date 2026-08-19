@@ -8,7 +8,7 @@ from .models import About, Skill, Project, Experience, Summary, Certification, E
 from apps.cv_assistant.services.cv_builder import build_cv_context
 from apps.cv_assistant.services.pdf_generator import generate_cv_pdf
 from django.conf import settings
-import markdown
+from core.markdown import render_markdown
 import json
 import requests
 import secrets
@@ -24,7 +24,7 @@ class HomeView(TemplateView):
         about = About.objects.first()
         if about:
             # Convert markdown content to HTML for about section
-            context['about_html'] = markdown.markdown(about.content, extensions=['extra', 'codehilite'])
+            context['about_html'] = render_markdown(about.content)
         context['about'] = about
         
         # Get skills grouped by category
@@ -40,7 +40,7 @@ class HomeView(TemplateView):
         projects = Project.objects.all()
         for project in projects:
             # Convert markdown description to HTML for project cards
-            project.description_html = markdown.markdown(project.description, extensions=['extra', 'codehilite'])
+            project.description_html = render_markdown(project.description)
         context['projects'] = projects
         
         return context
@@ -53,7 +53,7 @@ class ProjectDetailView(TemplateView):
         context = super().get_context_data(**kwargs)
         project = get_object_or_404(Project, pk=pk)
         # Convert markdown description to HTML
-        context['project_description_html'] = markdown.markdown(project.description, extensions=['extra', 'codehilite'])
+        context['project_description_html'] = render_markdown(project.description)
         context['project'] = project
         return context
 
@@ -68,14 +68,14 @@ class ExperienceListView(TemplateView):
         summary = Summary.objects.first()
         if summary:
             # Convert markdown content to HTML
-            context['summary_html'] = markdown.markdown(summary.content, extensions=['extra', 'codehilite'])
+            context['summary_html'] = render_markdown(summary.content)
         context['summary'] = summary
         
         # Get all experiences ordered by start date (most recent first)
         experiences = Experience.objects.all()
         for experience in experiences:
             # Convert markdown description to HTML
-            experience.description_html = markdown.markdown(experience.description, extensions=['extra', 'codehilite'])
+            experience.description_html = render_markdown(experience.description)
         context['experiences'] = experiences
         
         # Get all certifications ordered by issue date (most recent first)
@@ -83,7 +83,7 @@ class ExperienceListView(TemplateView):
         for certification in certifications:
             if certification.description:
                 # Convert markdown description to HTML
-                certification.description_html = markdown.markdown(certification.description, extensions=['extra', 'codehilite'])
+                certification.description_html = render_markdown(certification.description)
         context['certifications'] = certifications
         
         # Get all education entries ordered by start date (most recent first)
@@ -91,7 +91,7 @@ class ExperienceListView(TemplateView):
         for education in education_list:
             if education.description:
                 # Convert markdown description to HTML
-                education.description_html = markdown.markdown(education.description, extensions=['extra', 'codehilite'])
+                education.description_html = render_markdown(education.description)
         context['education_list'] = education_list
         
         context['recaptcha_public_key'] = settings.RECAPTCHA_PUBLIC_KEY
