@@ -187,7 +187,15 @@
         var div = document.createElement('div');
         var role = msg.role || 'user';
         div.className = 'message role-' + role;
-        div.innerHTML = escapeHtml(msg.content || '');
+        if (msg.content_html) {
+            // Server-rendered HTML (markdown) for assistant/user messages.
+            var body = document.createElement('div');
+            body.className = 'msg-body';
+            body.innerHTML = msg.content_html;
+            div.appendChild(body);
+        } else {
+            div.textContent = msg.content || '';
+        }
         var meta = document.createElement('div');
         meta.className = 'msg-meta';
         meta.textContent = role.charAt(0).toUpperCase() + role.slice(1);

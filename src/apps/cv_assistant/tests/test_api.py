@@ -178,6 +178,32 @@ class ChatEndpointsTest(APITestCase, _AuthMixin):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resp.json()), 2)
 
+    @patch(AI_CLIENT_PATH, return_value="Hello from the AI!")
+    def test_get_messages_returns_rendered_markdown_html(self, _mock):
+        self.job.messages.create(
+            role="assistant",
+            content="**Bold** plan:\n\n- item one\n- item two",
+        )
+        resp = self.client.get(f"{JOBS_URL}{self.job.pk}/messages/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.json()
+        self.assertEqual(data[0]["content"], "**Bold** plan:\n\n- item one\n- item two")
+        self.assertIn("<strong>Bold</strong>", data[0]["content_html"])
+        self.assertIn("<li>item one</li>", data[0]["content_html"])
+
+    @patch(AI_CLIENT_PATH, return_value="Hello from the AI!")
+    def test_get_messages_sanitizes_raw_html(self, _mock):
+        self.job.messages.create(
+            role="assistant",
+            content='<script>alert(1)</script> <img src=x onerror=alert(2)> **bold**',
+        )
+        resp = self.client.get(f"{JOBS_URL}{self.job.pk}/messages/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        html = resp.json()[0]["content_html"]
+        self.assertNotIn("<script>", html)
+        self.assertNotIn("onerror", html)
+        self.assertIn("<strong>bold</strong>", html)
+
     @patch(AI_CLIENT_PATH, return_value="AI reply text")
     def test_post_first_message_calls_ai_and_returns_both(self, mock_ai):
         resp = self.client.post(
