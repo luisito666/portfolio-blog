@@ -66,16 +66,15 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         )
 
         # 2. Build the conversation context for the AI.
-        # ALWAYS include the system prompt (CV data + rules)
+        # The system prompt carries the CV + job description as read-only
+        # context. It explicitly forbids dumping a full adapted CV in the
+        # chat — that is the "Generate CV" button's job.
         base_cv_data = cv_builder.build_cv_context()
-        system_prompt = cv_adapter.build_chat_system_prompt(base_cv_data)
-        conversation = [{"role": "system", "content": system_prompt}]
-
-        # ALWAYS include the adaptation prompt (job description context)
-        adaptation_prompt = cv_adapter.build_adaptation_prompt(
-            job_application.job_description
+        system_prompt = cv_adapter.build_chat_system_prompt(
+            base_cv_data,
+            job_description=job_application.job_description,
         )
-        conversation.append({"role": "user", "content": adaptation_prompt})
+        conversation = [{"role": "system", "content": system_prompt}]
 
         # Add prior messages from DB (excluding the just-created user message)
         prior = messages_qs.exclude(pk=user_message.pk).values("role", "content")
@@ -119,12 +118,21 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
         """
         job_application = self.get_object()
 
-        # 1-2. Build the base CV context and prompt messages.
+        # 1-2. Build the base CV context and prompt messages. The full chat
+        # history for this job application is included as additional context:
+        # the gaps/strengths/emphases discussed with the assistant inform the
+        # adaptation (without introducing facts outside the base CV).
+        conversation_history = list(
+            job_application.messages.all().order_by("created_at").values(
+                "role", "content"
+            )
+        )
         base_cv_data = cv_builder.build_cv_context()
         system_prompt = cv_adapter.build_system_prompt(base_cv_data)
         adaptation_prompt = cv_adapter.build_adaptation_prompt(
             job_application.job_description,
             request.data.get("user_instructions"),
+            conversation_history=conversation_history,
         )
         messages = [
             {"role": "system", "content": system_prompt},
