@@ -4,7 +4,8 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    XDG_CACHE_HOME=/app/.cache
 
 # Set work directory
 WORKDIR /app
@@ -50,5 +51,8 @@ ENTRYPOINT ["/entrypoint.sh"]
 # Run as non-root user
 USER appuser
 
-# Set default command with increased timeout for PDF generation
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--timeout", "120", "core.wsgi:application"]
+# Set default command: gthread worker with multiple workers/threads so a slow
+# LLM call (CV generation, chat) never blocks health probes — sync workers
+# serialize requests and caused liveness failures + pod restarts.
+# Timeout stays above AI_TIMEOUT (90s) + retry headroom.
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "120", "core.wsgi:application"]

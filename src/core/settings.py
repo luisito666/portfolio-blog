@@ -195,3 +195,8 @@ AI_BASE_URL = config('AI_BASE_URL', default='https://api.openai.com/v1')
 AI_MODEL = config('AI_MODEL', default='gpt-4o-mini')
 AI_TEMPERATURE = config('AI_TEMPERATURE', default=0.7, cast=float)
 AI_MAX_TOKENS = config('AI_MAX_TOKENS', default=4000, cast=int)
+# Bound LLM calls so a slow provider can never block a gunicorn worker
+# indefinitely (SDK default is 600s with 2 retries). 90s covers legit
+# long generations (4000 max_tokens) while staying under gunicorn's timeout.
+AI_TIMEOUT = config('AI_TIMEOUT', default=90, cast=int)
+AI_MAX_RETRIES = config('AI_MAX_RETRIES', default=1, cast=int)
