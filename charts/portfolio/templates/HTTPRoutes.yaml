@@ -17,10 +17,6 @@ spec:
     backendRefs:
     - name: portfolio
       port: 80
-    # AI endpoints (chat, generate-cv) can legitimately take >60s (LLM call).
-    # Raise gateway timeout above the sidecar (150s) and gunicorn (120s).
-    timeouts:
-      backendRequest: 180s
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -41,7 +37,3 @@ spec:
     backendRefs:
     - name: portfolio
       port: 80
-    # AI endpoints (chat, generate-cv) can legitimately take >60s (LLM call).
-    # Raise gateway timeout above the sidecar (150s) and gunicorn (120s).
-    timeouts:
-      backendRequest: 180s
