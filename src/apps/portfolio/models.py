@@ -182,6 +182,47 @@ class Education(models.Model):
         verbose_name = "Education"
         verbose_name_plural = "Education"
 
+class Language(models.Model):
+    """Model for storing spoken languages and their CEFR proficiency level.
+
+    Levels follow the Common European Framework of Reference (CEFR):
+    A1, A2, B1, B2, C1, C2, plus 'NATIVE' for the mother tongue.
+    """
+    LEVEL_A1 = 'A1'
+    LEVEL_A2 = 'A2'
+    LEVEL_B1 = 'B1'
+    LEVEL_B2 = 'B2'
+    LEVEL_C1 = 'C1'
+    LEVEL_C2 = 'C2'
+    LEVEL_NATIVE = 'NATIVE'
+
+    LEVEL_CHOICES = [
+        (LEVEL_A1, 'A1'),
+        (LEVEL_A2, 'A2'),
+        (LEVEL_B1, 'B1'),
+        (LEVEL_B2, 'B2'),
+        (LEVEL_C1, 'C1'),
+        (LEVEL_C2, 'C2'),
+        (LEVEL_NATIVE, 'Native'),
+    ]
+
+    name = models.CharField(max_length=100, help_text="Language name, e.g. 'Spanish', 'English'")
+    level = models.CharField(max_length=10, choices=LEVEL_CHOICES, help_text="CEFR level (A1-C2) or Native")
+    display_order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Lower numbers appear first in the CV",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_level_display()})"
+
+    class Meta:
+        ordering = ['display_order', 'name']
+        verbose_name = "Language"
+        verbose_name_plural = "Languages"
+
 class Lead(models.Model):
     """Model for storing leads who download the CV"""
     name = models.CharField(max_length=100)

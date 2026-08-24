@@ -115,6 +115,17 @@
     </div>
     {% endif %}
 
+    {% if languages %}
+    <div class="section">
+        <h2>Languages</h2>
+        <div>
+            {% for lang in languages %}
+                {{ lang.name }} ({{ lang.get_level_display }}){% if not forloop.last %} &middot; {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if experiences %}
     <div class="section">
         <h2>Work Experience</h2>
