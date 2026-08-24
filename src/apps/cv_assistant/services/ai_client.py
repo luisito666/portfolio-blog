@@ -12,6 +12,8 @@ def get_ai_client():
     return OpenAI(
         api_key=settings.AI_API_KEY,
         base_url=settings.AI_BASE_URL,
+        timeout=settings.AI_TIMEOUT,
+        max_retries=settings.AI_MAX_RETRIES,
     )
 
 

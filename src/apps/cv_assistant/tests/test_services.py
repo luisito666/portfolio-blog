@@ -267,3 +267,22 @@ class TestCvAdapter(TestCase):
         }
         with self.assertRaises(ValueError):
             cv_adapter.parse_ai_response(json.dumps(payload))
+
+class TestAiClientTimeoutConfig(TestCase):
+    """Task: bound LLM calls — get_ai_client must pass timeout/max_retries
+    from settings so a slow provider can never block a worker indefinitely."""
+
+    def test_get_ai_client_applies_timeout_and_retries(self):
+        client = ai_client.get_ai_client()
+        self.assertEqual(client.timeout, 90)
+        self.assertEqual(client.max_retries, 1)
+
+    def test_timeout_overridable_via_env(self):
+        with patch('apps.cv_assistant.services.ai_client.settings') as mock_settings:
+            mock_settings.AI_API_KEY = 'test-key'
+            mock_settings.AI_BASE_URL = 'https://example.com/v1'
+            mock_settings.AI_TIMEOUT = 30
+            mock_settings.AI_MAX_RETRIES = 2
+            client = ai_client.get_ai_client()
+        self.assertEqual(client.timeout, 30)
+        self.assertEqual(client.max_retries, 2)
