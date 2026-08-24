@@ -16,6 +16,7 @@ Un blog personal y portfolio profesional construido con Django, diseñado para d
 - [Configuración](#configuración)
 - [Funcionalidades](#funcionalidades)
   - [API REST del Blog (DRF + JWT)](#api-rest-del-blog-drf--jwt)
+  - [Asistente IA de CV (cv_assistant)](#asistente-ia-de-cv-cv_assistant)
 - [Modelos de Datos](#modelos-de-datos)
 - [Editor Markdown](#editor-markdown)
 - [Licencia](#licencia)
@@ -24,6 +25,7 @@ Un blog personal y portfolio profesional construido con Django, diseñado para d
 
 - **Portfolio Personal**: Muestra información sobre ti, tus habilidades técnicas y proyectos destacados
 - **Blog Técnico**: Sistema de publicación con soporte completo para Markdown
+- **Asistente IA de CV**: Chat conversacional que adapta tu CV a ofertas laborales y genera versiones en PDF
 - **Editor Markdown Avanzado**: Panel de administración con editor personalizado que incluye toolbar y atajos de teclado
 - **Resaltado de Sintaxis**: Renderizado de código con CodeHilite para publicaciones técnicas
 - **Diseño Responsive**: Interfaz moderna y adaptable a dispositivos móviles
@@ -65,8 +67,13 @@ portfolio-blog/
 │   │   │   ├── views.py           # Vistas de lista y detalle
 │   │   │   ├── admin.py           # Admin con editor Markdown
 │   │   │   └── static/admin/      # CSS y JS del editor
+│   │   ├── cv_assistant/          # Asistente IA de CV
+│   │   │   ├── models.py          # JobApplication, ChatMessage, CVVersion, RecruiterResponse
+│   │   │   ├── api/               # API REST (DRF + JWT, solo staff)
+│   │   │   ├── services/          # ai_client, cv_adapter, cv_builder, pdf_generator
+│   │   │   └── templates/         # UI de chat del admin
 │   │   └── portfolio/             # Aplicación del portfolio
-│   │       ├── models.py          # Modelos About, Skill, Project
+│   │       ├── models.py          # Modelos About, Skill, Project, Experience, Language, etc.
 │   │       └── views.py           # Vista principal
 │   ├── templates/                 # Plantillas HTML
 │   │   ├── base.html
@@ -458,6 +465,7 @@ El proyecto cuenta con una suite de tests organizada por aplicación:
 |-----------|-----------|
 | `src/apps/portfolio/tests/` | Tests de modelos, vistas, URLs, admin y context processors |
 | `src/apps/blog/tests/` | Tests de modelos, vistas, serializers, admin y API |
+| `src/apps/cv_assistant/tests/` | Tests de la API del asistente IA, permisos y servicios (cliente IA, adaptador, builder, PDF) |
 | `src/core/tests/` | Tests de health checks y middleware |
 
 **Ejecutar la suite completa**:
@@ -467,7 +475,7 @@ cd src
 python manage.py test --settings=core.test_settings
 ```
 
-Actualmente hay **218 tests** que pasan en ~0.6s. Estos mismos tests se ejecutan automáticamente en el
+Actualmente hay **280 tests** que pasan en ~1.3s. Estos mismos tests se ejecutan automáticamente en el
 pipeline de [CI/CD](#cicd) en cada Pull Request y push a `main`.
 
 ---
@@ -490,7 +498,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1,tudominio.com
 CSRF_TRUSTED_ORIGINS=https://tudominio.com,https://www.tudominio.com
 
 # Database (usar DATABASE_URL o variables individuales)
-DATABASE_URL=postgresql://blog_user:password@db:5432/blog_db
+DATABASE_URL=postgresql://blog_user:***@db:5432/blog_db
 
 # O usar variables individuales:
 # DB_ENGINE=django.db.backends.postgresql
@@ -499,6 +507,13 @@ DATABASE_URL=postgresql://blog_user:password@db:5432/blog_db
 # DB_PASSWORD=password
 # DB_HOST=db
 # DB_PORT=5432
+
+# Asistente IA de CV (proveedor OpenAI-compatible)
+# AI_API_KEY=tu_api_key
+# AI_BASE_URL=https://api.openai.com/v1
+# AI_MODEL=gpt-4o-mini
+# AI_TEMPERATURE=0.7
+# AI_MAX_TOKENS=9000
 
 # Static/Media (opcional en Docker)
 # STATIC_ROOT=/app/staticfiles
@@ -567,6 +582,8 @@ La aplicación expone endpoints para health checks de Kubernetes que bypass `ALL
 - **Skills**: Habilidades técnicas organizadas por categorías con niveles de competencia
 - **Proyectos**: Muestra proyectos con imágenes, descripciones, enlaces a GitHub y demos en vivo
 - **Proyectos Destacados**: Sistema para resaltar proyectos importantes
+- **Descarga de CV**: Endpoint público `/download-cv/` que genera el CV en PDF al vuelo con WeasyPrint
+- **Idiomas**: Idiomas hablados con nivel CEFR (A1–C2), incluidos en el CV generado
 
 ### Blog
 
@@ -629,6 +646,60 @@ curl -X POST http://localhost:8000/api/v1/posts/ \
 - `AUTH_HEADER_TYPES`: `Bearer`
 - Paginación por defecto: `PageNumberPagination` con `PAGE_SIZE` de 10
 
+### Asistente IA de CV (cv_assistant)
+
+Aplicación (`src/apps/cv_assistant/`) que combina un **chat conversacional con IA** y la generación de
+**versiones de CV adaptadas a ofertas laborales específicas**, con exportación a PDF. Usa un cliente
+**OpenAI-compatible** (`services/ai_client.py`) que funciona con cualquier proveedor que implemente la
+spec de OpenAI (OpenAI, ZAI/GLM, DeepSeek, etc.) mediante `AI_BASE_URL` configurable.
+
+**Flujo de uso**: registras una oferta (empresa + posición + descripción) → conversas con el asistente
+sobre cómo adaptar tu CV → generas una versión adaptada → la descargas en PDF → registras la respuesta
+del reclutador → consultas métricas en el dashboard.
+
+**Endpoints API** (`/api/v1/cv-assistant/`, requieren JWT + usuario staff):
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET/POST | `/api/v1/cv-assistant/jobs/` | CRUD de ofertas laborales (JobApplication) |
+| GET | `/api/v1/cv-assistant/jobs/<id>/messages/` | Historial de mensajes de una oferta |
+| POST | `/api/v1/cv-assistant/jobs/<id>/messages/` | Envía un mensaje y obtiene la respuesta de la IA |
+| POST | `/api/v1/cv-assistant/jobs/<id>/generate-cv/` | Genera una versión adaptada del CV con IA |
+| GET/POST | `/api/v1/cv-assistant/cv-versions/` | CRUD de versiones de CV |
+| POST | `/api/v1/cv-assistant/cv-versions/<id>/regenerate-pdf/` | Regenera el PDF de una versión |
+| GET/POST | `/api/v1/cv-assistant/recruiter-responses/` | CRUD de respuestas de reclutadores |
+| GET | `/api/v1/cv-assistant/dashboard/` | Métricas: totales, desglose por estado y tipo de respuesta |
+| POST | `/api/v1/cv-assistant/auth/login/` | Login JWT (mismo esquema que la API del blog) |
+
+**UI de chat en el admin** (`/assistant/`, solo staff): interfaz conversacional donde seleccionas una
+oferta, eliges la versión de CV a enviar y charlas con la IA. El markdown de las respuestas se renderiza
+**del lado del servidor** y se sanea (`content_html`), evitando XSS desde el output del modelo.
+
+**Servicios** (`services/`):
+
+- `ai_client.py` — wrapper del cliente OpenAI (model, temperature, max_tokens configurables)
+- `cv_adapter.py` — construye los prompts (system + user) para adaptar el CV base a la oferta y
+  parsea/valida la respuesta JSON estructurada de la IA
+- `cv_builder.py` — arma el contexto del CV base desde los modelos del portfolio (summary, experiencias,
+  skills, educación, certificaciones, **idiomas con nivel CEFR**)
+- `pdf_generator.py` — genera el PDF con **WeasyPrint** a partir del template `cv_pdf.html`
+
+**Seguridad**: permiso `IsAdminUser` (solo staff) en toda la API; el chat admin usa `UserPassesTestMixin`.
+Si el proveedor de IA falla, los endpoints de chat/generación devuelven `503` sin exponer detalles del error.
+
+**Configuración** (`settings.py` + `.environment/django/.env.example`):
+
+```env
+AI_API_KEY=tu_api_key                # en K8s: SealedSecret, nunca en values.yaml
+AI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-4o-mini
+AI_TEMPERATURE=0.7
+AI_MAX_TOKENS=9000
+```
+
+> En Kubernetes, `AI_BASE_URL`, `AI_MODEL`, `AI_TEMPERATURE` y `AI_MAX_TOKENS` van en el ConfigMap del
+> chart (`charts/portfolio/values.yaml`) y `AI_API_KEY` en el SealedSecret.
+
 ## Modelos de Datos
 
 ### Blog
@@ -669,6 +740,30 @@ curl -X POST http://localhost:8000/api/v1/posts/ \
 - `featured`: BooleanField(default=False)
 - `created_at`: DateTimeField(auto_now_add=True)
 - `updated_at`: DateTimeField(auto_now=True)
+
+**Experience** - Experiencia laboral usada por el pipeline de CV (`position`, `company`, `description` en Markdown, fechas)
+
+**Summary** - Resumen profesional del CV (`content` en Markdown)
+
+**Certification** - Certificaciones (p. ej. CKA/CKAD) mostradas en el CV
+
+**Education** - Formación académica del CV
+
+**Language** - Idiomas hablados con nivel **CEFR** (A1–C2 o Nativo), integrados al pipeline de CV
+
+**Lead** - Formulario de contacto del portfolio (protegido con reCAPTCHA)
+
+### CV Assistant (cv_assistant)
+
+**JobApplication** - Oferta laboral (`company`, `position`, `job_description`, `status`: draft/in_progress/sent/closed…)
+
+**ChatMessage** - Mensajes de la conversación con la IA (`role`: user/assistant/system, FK a JobApplication)
+
+**CVVersion** - Versión adaptada del CV (FK a JobApplication, `version_number`, `adapted_summary`,
+`adapted_experiences`/`adapted_certifications`/`adapted_education` en JSONField, `ai_model`,
+`prompt_summary`, `pdf_file`, `is_final`)
+
+**RecruiterResponse** - Respuesta del reclutador sobre una versión del CV (FK a CVVersion, `response_type`, `notes`, `responded_at`)
 
 ## Editor Markdown
 
