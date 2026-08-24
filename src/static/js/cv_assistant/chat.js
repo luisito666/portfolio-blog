@@ -250,7 +250,7 @@
             });
     }
 
-    // ---- Generate CV ----
+    // ---- Generate CV (async: 202 + poll job status) ----
     function generateCV() {
         if (!state.selectedJobId) return;
         var btn = $('generate-cv-btn');
@@ -258,19 +258,63 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
         apiCall('POST', 'jobs/' + state.selectedJobId + '/generate-cv/', {})
             .then(function (resp) {
-                btn.innerHTML = '<i class="fas fa-check"></i> CV Generated';
-                showSystemMessage('CV generated successfully.');
-                loadCVVersions(state.selectedJobId);
-                setTimeout(function () {
-                    btn.innerHTML = '<i class="fas fa-file-alt"></i> Generate CV';
-                    btn.disabled = false;
-                }, 2000);
+                // 202: generation runs server-side; poll until done
+                showSystemMessage('CV generation started...');
+                pollGenerationStatus(state.selectedJobId, btn);
             })
             .catch(function (err) {
-                btn.innerHTML = '<i class="fas fa-file-alt"></i> Generate CV';
-                btn.disabled = false;
+                if (err.status === 409) {
+                    // Already running — resume polling instead of erroring
+                    showSystemMessage('Generation already in progress, waiting...');
+                    pollGenerationStatus(state.selectedJobId, btn);
+                    return;
+                }
+                resetGenerateBtn(btn);
                 showError(err.data ? JSON.stringify(err.data) : err.message);
             });
+    }
+
+    var GEN_POLL_MS = 4000;
+    var GEN_POLL_MAX = 60; // ~4 minutes
+
+    function resetGenerateBtn(btn) {
+        btn.innerHTML = '<i class="fas fa-file-alt"></i> Generate CV';
+        btn.disabled = false;
+    }
+
+    function pollGenerationStatus(jobId, btn) {
+        var attempts = 0;
+        function tick() {
+            attempts++;
+            apiCall('GET', 'jobs/' + jobId + '/')
+                .then(function (job) {
+                    if (job.status === 'cv_generated') {
+                        btn.innerHTML = '<i class="fas fa-check"></i> CV Generated';
+                        showSystemMessage('CV generated successfully.');
+                        loadCVVersions(jobId);
+                        loadMessages(jobId);
+                        loadJobs();
+                        setTimeout(function () { resetGenerateBtn(btn); }, 2000);
+                    } else if (job.status === 'cv_failed') {
+                        resetGenerateBtn(btn);
+                        loadMessages(jobId); // shows the failure system message
+                    } else if (attempts >= GEN_POLL_MAX) {
+                        resetGenerateBtn(btn);
+                        showSystemMessage('Still generating... refresh in a moment.');
+                    } else {
+                        setTimeout(tick, GEN_POLL_MS);
+                    }
+                })
+                .catch(function () {
+                    if (attempts >= GEN_POLL_MAX) {
+                        resetGenerateBtn(btn);
+                        showSystemMessage('Lost track of generation — refresh to check.');
+                    } else {
+                        setTimeout(tick, GEN_POLL_MS);
+                    }
+                });
+        }
+        setTimeout(tick, GEN_POLL_MS);
     }
 
     function showSystemMessage(text) {

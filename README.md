@@ -664,7 +664,7 @@ del reclutador → consultas métricas en el dashboard.
 | GET/POST | `/api/v1/cv-assistant/jobs/` | CRUD de ofertas laborales (JobApplication) |
 | GET | `/api/v1/cv-assistant/jobs/<id>/messages/` | Historial de mensajes de una oferta |
 | POST | `/api/v1/cv-assistant/jobs/<id>/messages/` | Envía un mensaje y obtiene la respuesta de la IA |
-| POST | `/api/v1/cv-assistant/jobs/<id>/generate-cv/` | Genera una versión adaptada del CV con IA |
+| POST | `/api/v1/cv-assistant/jobs/<id>/generate-cv/` | Inicia la generación del CV adaptado con IA. Devuelve **202** inmediato; el progreso se consulta con `GET /jobs/<id>/` (`status`: `cv_generating` → `cv_generated` \| `cv_failed`) |
 | GET/POST | `/api/v1/cv-assistant/cv-versions/` | CRUD de versiones de CV |
 | POST | `/api/v1/cv-assistant/cv-versions/<id>/regenerate-pdf/` | Regenera el PDF de una versión |
 | GET/POST | `/api/v1/cv-assistant/recruiter-responses/` | CRUD de respuestas de reclutadores |

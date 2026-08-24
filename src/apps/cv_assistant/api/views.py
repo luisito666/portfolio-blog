@@ -16,6 +16,10 @@ from apps.cv_assistant.models import (
 )
 from apps.cv_assistant.services import cv_adapter, cv_builder, pdf_generator
 from apps.cv_assistant.services.ai_client import chat_completion
+from apps.cv_assistant.services.cv_generator import (
+    CVGenerationInProgress,
+    start_cv_generation,
+)
 
 from .permissions import IsAdminUser
 from .serializers import (
@@ -109,86 +113,36 @@ class JobApplicationViewSet(viewsets.ModelViewSet):
     # ------------------------------------------------------------------
     @action(detail=True, methods=["post"], url_path="generate-cv")
     def generate_cv(self, request, pk=None):
-        """Generate an AI-adapted CV version (with PDF) for this job application.
+        """Asynchronously generate an AI-adapted CV version for this job.
 
-        Accepts optional ``user_instructions`` and ``prompt_summary`` in the
-        request body. Creates a new ``CVVersion`` with an incrementing
-        ``version_number``, generates the PDF, and marks the job application
-        status as ``'cv_generated'``.
+        Returns 202 immediately; the LLM pipeline runs in a background
+        thread and reports progress through the job's ``status`` field:
+        ``cv_generating`` -> ``cv_generated`` | ``cv_failed``. Poll
+        ``GET /jobs/<pk>/`` for status; the new CVVersion (with PDF) appears
+        in ``GET /cv-versions/?job=<pk>`` on success.
+
+        The async design exists because the LLM call legitimately takes up
+        to AI_TIMEOUT (90s) and no synchronous request survives the proxy
+        chain (NGINX Gateway Fabric backend timeout 60s, Cloudflare 100s).
         """
         job_application = self.get_object()
 
-        # 1-2. Build the base CV context and prompt messages. The full chat
-        # history for this job application is included as additional context:
-        # the gaps/strengths/emphases discussed with the assistant inform the
-        # adaptation (without introducing facts outside the base CV).
-        conversation_history = list(
-            job_application.messages.all().order_by("created_at").values(
-                "role", "content"
-            )
-        )
-        base_cv_data = cv_builder.build_cv_context()
-        system_prompt = cv_adapter.build_system_prompt(base_cv_data)
-        adaptation_prompt = cv_adapter.build_adaptation_prompt(
-            job_application.job_description,
-            request.data.get("user_instructions"),
-            conversation_history=conversation_history,
-        )
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": adaptation_prompt},
-        ]
-
-        # 3. Call the AI and parse the structured response.
         try:
-            ai_response = chat_completion(messages)
-        except Exception as e:
-            return Response(
-                {"detail": f'AI service temporarily unavailable. {e.args[0]}'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
-        try:
-            parsed = cv_adapter.parse_ai_response(ai_response)
-        except ValueError as e:
-            return Response(
-                {"detail": f"AI response was not valid: {e}"},
-                status=422,
-            )
-
-        # 4-5. Determine version_number and create CVVersion atomically.
-        with transaction.atomic():
-            existing_versions = job_application.cv_versions.select_for_update()
-            existing_max = existing_versions.aggregate(
-                _max_version=Max("version_number"),
-            )["_max_version"]
-            next_version = (existing_max or 0) + 1
-
-            cv_version = job_application.cv_versions.create(
-                version_number=next_version,
-                adapted_summary=parsed["summary"],
-                adapted_experiences=parsed["experiences"],
-                ai_model=settings.AI_MODEL,
+            start_cv_generation(
+                job_application,
+                user_instructions=request.data.get("user_instructions"),
                 prompt_summary=request.data.get("prompt_summary", ""),
             )
+        except CVGenerationInProgress:
+            return Response(
+                {"detail": "CV generation already in progress."},
+                status=status.HTTP_409_CONFLICT,
+            )
 
-        # 6. Build the adapted context and generate the PDF.
-        adapted_data = {
-            "summary": parsed["summary"],
-            "experiences": parsed["experiences"],
-        }
-        context = cv_builder.build_cv_context(adapted_data=adapted_data)
-        pdf_bytes = pdf_generator.generate_cv_pdf(context)
-        pdf_name = f"cv_v{next_version}_{job_application.company}.pdf"
-        cv_version.pdf_file.save(pdf_name, ContentFile(pdf_bytes), save=True)
-
-        # 7. Update the job application status.
-        job_application.status = "cv_generated"
-        job_application.save()
-
-        # 8. Return the serialized CV version.
-        serializer = CVVersionSerializer(cv_version)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            {"detail": "CV generation started."},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
     # ------------------------------------------------------------------
     # Task 13: Dashboard endpoint — CV success metrics.
