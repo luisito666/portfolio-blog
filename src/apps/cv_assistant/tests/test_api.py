@@ -15,7 +15,12 @@ from apps.cv_assistant.models import CVVersion, JobApplication, RecruiterRespons
 User = get_user_model()
 
 # Dotted path used to mock the AI client without making real API calls.
+# Dotted path used to mock the AI client without making real API calls.
+# Note: generate-cv runs the pipeline in cv_generator (async since the proxy-timeout
+# rework); the chat POST still calls chat_completion from api.views.
 AI_CLIENT_PATH = "apps.cv_assistant.api.views.chat_completion"
+AI_CLIENT_GEN_PATH = "apps.cv_assistant.services.cv_generator.chat_completion"
+PDF_GEN_INLINE_PATH = "apps.cv_assistant.services.cv_generator.pdf_generator.generate_cv_pdf"
 # Dotted path for mocking the PDF generator.
 PDF_GEN_PATH = "apps.cv_assistant.api.views.pdf_generator.generate_cv_pdf"
 
@@ -256,7 +261,7 @@ VALID_AI_RESPONSE = (
 
 
 class GenerateCVTest(APITestCase, _AuthMixin):
-    """Task 10: /api/v1/cv-assistant/jobs/<pk>/generate-cv/ endpoint."""
+    """Task 10: /api/v1/cv-assistant/jobs/<pk>/generate-cv/ endpoint (async)."""
 
     @classmethod
     def setUpTestData(cls):
@@ -274,91 +279,134 @@ class GenerateCVTest(APITestCase, _AuthMixin):
             job_description="We need a Django dev with REST experience.",
         )
 
-    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake pdf content")
-    @patch(AI_CLIENT_PATH, return_value=VALID_AI_RESPONSE)
+    def _run_generation_inline(self, job=None):
+        """POST generate-cv and synchronously drain the background thread.
+
+        The view returns 202 and spawns a thread; for deterministic tests we
+        patch start_cv_generation's thread to run the pipeline inline.
+        """
+        from apps.cv_assistant.services import cv_generator
+
+        def _inline_start(job_application, user_instructions=None, prompt_summary=""):
+            job_application.status = cv_generator.STATUS_GENERATING
+            job_application.save(update_fields=["status"])
+            cv_generator.run_cv_generation(
+                job_application.pk,
+                user_instructions=user_instructions,
+                prompt_summary=prompt_summary,
+            )
+            return None
+
+        with patch(
+            "apps.cv_assistant.api.views.start_cv_generation",
+            side_effect=_inline_start,
+        ):
+            return self.client.post(
+                f"{JOBS_URL}{(job or self.job).pk}/generate-cv/",
+                {"user_instructions": "Emphasize REST."},
+                format="json",
+            )
+
+    @patch(PDF_GEN_INLINE_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_GEN_PATH, return_value=VALID_AI_RESPONSE)
+    def test_generate_cv_returns_202(self, _mock_ai, _mock_pdf):
+        resp = self.client.post(f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json")
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+        self.job.refresh_from_db()
+        self.assertIn(self.job.status, ("cv_generating", "cv_generated"))
+
+    @patch(PDF_GEN_INLINE_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_GEN_PATH, return_value=VALID_AI_RESPONSE)
     def test_generate_cv_creates_version_1(self, _mock_ai, _mock_pdf):
-        resp = self.client.post(
-            f"{JOBS_URL}{self.job.pk}/generate-cv/",
-            {"user_instructions": "Emphasize REST."},
-            format="json",
-        )
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        data = resp.json()
-        self.assertEqual(data["version_number"], 1)
-        self.assertEqual(data["adapted_summary"], "Adapted summary for the role.")
-        self.assertEqual(data["ai_model"], "gpt-4o-mini")
-        # PDF file field should be populated
-        self.assertTrue(data["pdf_file"])
-        # CVVersion created and PDF non-empty on disk
+        resp = self._run_generation_inline()
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
         cv = CVVersion.objects.get(job_application=self.job, version_number=1)
+        self.assertEqual(cv.adapted_summary, "Adapted summary for the role.")
+        self.assertEqual(cv.ai_model, "gpt-4o-mini")
         self.assertTrue(cv.pdf_file.name)
         cv.pdf_file.open("rb")
         content = cv.pdf_file.read()
         cv.pdf_file.close()
         self.assertTrue(len(content) > 0)
-        # Job status updated
         self.job.refresh_from_db()
         self.assertEqual(self.job.status, "cv_generated")
 
-    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake pdf content")
-    @patch(AI_CLIENT_PATH, return_value=VALID_AI_RESPONSE)
+    @patch(PDF_GEN_INLINE_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_GEN_PATH, return_value=VALID_AI_RESPONSE)
     def test_generate_cv_second_call_creates_version_2(self, _mock_ai, _mock_pdf):
-        # First call -> version 1
-        self.client.post(
-            f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
-        )
-        # Second call -> version 2
-        resp = self.client.post(
-            f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
-        )
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(resp.json()["version_number"], 2)
+        self._run_generation_inline()
+        self._run_generation_inline()
         self.assertEqual(
             CVVersion.objects.filter(job_application=self.job).count(), 2
         )
+        self.assertTrue(
+            CVVersion.objects.filter(job_application=self.job, version_number=2).exists()
+        )
 
-    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake")
-    @patch(AI_CLIENT_PATH, side_effect=Exception("AI service down"))
-    def test_generate_cv_ai_failure_returns_503(self, _mock_ai, _mock_pdf):
-        resp = self.client.post(f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json")
-        self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+    @patch(PDF_GEN_INLINE_PATH, return_value=b"%PDF-1.4 fake")
+    @patch(AI_CLIENT_GEN_PATH, side_effect=Exception("AI service down"))
+    def test_generate_cv_ai_failure_marks_job_failed(self, _mock_ai, _mock_pdf):
+        resp = self._run_generation_inline()
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, "cv_failed")
+        self.assertEqual(CVVersion.objects.filter(job_application=self.job).count(), 0)
+        # Failure is reported as a system message in the chat
+        sys_msgs = self.job.messages.filter(role="system")
+        self.assertTrue(sys_msgs.exists())
+        self.assertIn("CV generation failed", sys_msgs.last().content)
+
+    @patch(PDF_GEN_INLINE_PATH, return_value=b"%PDF-1.4 fake")
+    @patch(AI_CLIENT_GEN_PATH, return_value="not valid json at all")
+    def test_generate_cv_parse_failure_marks_job_failed(self, _mock_ai, _mock_pdf):
+        resp = self._run_generation_inline()
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, "cv_failed")
         self.assertEqual(CVVersion.objects.filter(job_application=self.job).count(), 0)
 
-    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake pdf content")
-    @patch(AI_CLIENT_PATH, return_value=VALID_AI_RESPONSE)
+    @patch(PDF_GEN_INLINE_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_GEN_PATH, return_value=VALID_AI_RESPONSE)
     def test_generate_cv_includes_conversation_history(self, mock_ai, _mock_pdf):
         """The chat history for this job must be sent to the AI as context."""
         self.job.messages.create(role="user", content="Do I fit this role?")
         self.job.messages.create(
             role="assistant", content="Yes, but highlight observability."
         )
-        resp = self.client.post(
-            f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
-        )
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        resp = self._run_generation_inline()
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
         _, kwargs = mock_ai.call_args
         adaptation_msg = kwargs["messages"][1]["content"] if "messages" in kwargs else mock_ai.call_args[0][0][1]["content"]
         self.assertIn("CONVERSATION HISTORY", adaptation_msg)
         self.assertIn("Do I fit this role?", adaptation_msg)
         self.assertIn("highlight observability", adaptation_msg)
 
-    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake pdf content")
-    @patch(AI_CLIENT_PATH, return_value=VALID_AI_RESPONSE)
+    @patch(PDF_GEN_INLINE_PATH, return_value=b"%PDF-1.4 fake pdf content")
+    @patch(AI_CLIENT_GEN_PATH, return_value=VALID_AI_RESPONSE)
     def test_generate_cv_without_history_omits_block(self, mock_ai, _mock_pdf):
         """No chat history -> no CONVERSATION HISTORY block in the prompt."""
-        resp = self.client.post(
-            f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
-        )
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        resp = self._run_generation_inline()
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
         _, kwargs = mock_ai.call_args
         adaptation_msg = kwargs["messages"][1]["content"] if "messages" in kwargs else mock_ai.call_args[0][0][1]["content"]
         self.assertNotIn("CONVERSATION HISTORY", adaptation_msg)
 
-    @patch(PDF_GEN_PATH, return_value=b"%PDF-1.4 fake")
-    @patch(AI_CLIENT_PATH, return_value="not valid json at all")
-    def test_generate_cv_parse_failure_returns_422(self, _mock_ai, _mock_pdf):
-        resp = self.client.post(f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json")
-        self.assertEqual(resp.status_code, 422)
+    def test_generate_cv_conflict_while_generating(self):
+        """409 when a live generation is already in progress."""
+        from django.utils import timezone
+        from apps.cv_assistant.services.cv_generator import CVGenerationInProgress
+
+        self.job.status = "cv_generating"
+        self.job.save()
+
+        with patch(
+            "apps.cv_assistant.api.views.start_cv_generation",
+            side_effect=CVGenerationInProgress("already running"),
+        ):
+            resp = self.client.post(
+                f"{JOBS_URL}{self.job.pk}/generate-cv/", format="json"
+            )
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
 
 
 # ---------------------------------------------------------------------------

@@ -161,6 +161,9 @@ html.dark {
 .status-badge.s-sent  { background: #c6f6d5; color: #22543d; }
 .status-badge.s-interview { background: #fefcbf; color: #744210; }
 .status-badge.s-rejected { background: #fed7d7; color: #742a2a; }
+.status-badge.s-cv_generating { background: #e9d8fd; color: #44337a; }
+.status-badge.s-cv_failed { background: #fed7d7; color: #742a2a; }
+.status-badge.s-cv_generated { background: #c6f6d5; color: #22543d; }
 
 /* ===== Messages area ===== */
 .chat-messages {
