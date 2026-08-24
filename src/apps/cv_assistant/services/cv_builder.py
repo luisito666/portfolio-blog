@@ -15,6 +15,7 @@ from apps.portfolio.models import (
     Certification,
     Education,
     Experience,
+    Language,
     Skill,
     SocialSettings,
     Summary,
@@ -110,6 +111,7 @@ def build_cv_context(adapted_data=None):
 
     skill_columns = _build_skill_columns()
     social_settings = SocialSettings.objects.first()
+    languages = Language.objects.all()
 
     if adapted_data is None:
         summary = Summary.objects.first()
@@ -137,6 +139,7 @@ def build_cv_context(adapted_data=None):
         'education_list': education_list,
         'skill_columns': skill_columns,
         'social_settings': social_settings,
+        'languages': languages,
         'pdf_owner_name': settings.PDF_OWNER_NAME,
     }
     return context

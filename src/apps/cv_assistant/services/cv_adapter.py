@@ -84,6 +84,20 @@ def _format_base_cv_data(base_cv_data):
             cert_lines.append(f"  - {name} ({org})")
         certifications_text = "\n".join(cert_lines)
 
+    # Extract languages
+    languages_raw = base_cv_data.get('languages', [])
+    if not languages_raw:
+        languages_text = "  No languages listed."
+    else:
+        lang_lines = []
+        for lang in languages_raw:
+            name = getattr(lang, 'name', 'N/A')
+            level = getattr(lang, 'level', 'N/A')
+            if hasattr(lang, 'get_level_display'):
+                level = lang.get_level_display()
+            lang_lines.append(f"  - {name} ({level})")
+        languages_text = "\n".join(lang_lines)
+
     return f"""Professional Summary:
 {summary_text}
 
@@ -96,7 +110,10 @@ Education:
 {education_text}
 
 Certifications:
-{certifications_text}"""
+{certifications_text}
+
+Languages:
+{languages_text}"""
 
 
 def build_system_prompt(base_cv_data):

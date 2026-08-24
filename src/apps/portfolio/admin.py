@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import About, Skill, Project, SocialSettings, Experience, Summary, Certification, Education, Lead
+from .models import About, Skill, Project, SocialSettings, Experience, Summary, Certification, Education, Lead, Language
 
 @admin.register(Lead)
 class LeadAdmin(admin.ModelAdmin):
@@ -150,6 +150,14 @@ class CertificationAdmin(admin.ModelAdmin):
         return obj.is_expired
     is_expired.boolean = True
     is_expired.short_description = 'Expired'
+
+@admin.register(Language)
+class LanguageAdmin(admin.ModelAdmin):
+    list_display = ['name', 'level', 'display_order', 'created_at']
+    list_filter = ['level']
+    search_fields = ['name']
+    list_editable = ['level', 'display_order']
+    readonly_fields = ['created_at', 'updated_at']
 
 @admin.register(Education)
 class EducationAdmin(admin.ModelAdmin):
